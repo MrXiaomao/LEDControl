@@ -1,12 +1,13 @@
 ﻿//{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ 生成的包含文件。
-// 供 LightningControl.rc 使用
+// 供 LightingControl.rc 使用
 //
 #define IDM_ABOUTBOX                    0x0010
 #define IDD_ABOUTBOX                    100
 #define IDS_ABOUTBOX                    101
-#define IDD_LIGHTNINGCONTROL_DIALOG     102
+#define IDD_LIGHTINGCONTROL_DIALOG      102
 #define IDR_MAINFRAME                   128
+#define IDI_ICON1                       130
 #define IDC_SERIALPORT_ID               1000
 #define IDC_CONNECT_SERIALPORT          1002
 #define IDC_CHECK1                      1003
@@ -30,16 +31,16 @@
 #define IDC_CHECK15                     1025
 #define IDC_CHECK16                     1026
 #define IDC_VOLTB                       1027
-#define IDC_LIGHTNING_WIDTH             1028
-#define IDC_LIGHTNING_DELAY             1029
-#define IDC_LIGHTNING_TIME              1030
+#define IDC_LIGHTING_WIDTH              1028
+#define IDC_LIGHTING_DELAY              1029
+#define IDC_LIGHTING_TIME               1030
 #define IDC_LOOP_TRIGGER                1031
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        130
+#define _APS_NEXT_RESOURCE_VALUE        131
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         1016
 #define _APS_NEXT_SYMED_VALUE           101

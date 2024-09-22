@@ -1,20 +1,20 @@
 ﻿
-// LightningControlDlg.h: 头文件
+// LightingControlDlg.h: 头文件
 //
 
 #pragma once
 
 
-// CLightningControlDlg 对话框
-class CLightningControlDlg : public CDialogEx
+// CLightingControlDlg 对话框
+class CLightingControlDlg : public CDialogEx
 {
 // 构造
 public:
-	CLightningControlDlg(CWnd* pParent = nullptr);	// 标准构造函数
+	CLightingControlDlg(CWnd* pParent = nullptr);	// 标准构造函数
 
 // 对话框数据
 #ifdef AFX_DESIGN_TIME
-	enum { IDD = IDD_LIGHTNINGCONTROL_DIALOG };
+	enum { IDD = IDD_LIGHTINGCONTROL_DIALOG };
 #endif
 
 	protected:

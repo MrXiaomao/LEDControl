@@ -1,12 +1,14 @@
 ﻿
-// LightningControlDlg.cpp: 实现文件
+// LightingControlDlg.cpp: 实现文件
 //
 
 #include "pch.h"
 #include "framework.h"
-#include "LightningControl.h"
-#include "LightningControlDlg.h"
+#include "LightingControl.h"
+#include "LightingControlDlg.h"
 #include "afxdialogex.h"
+
+#include "MyConst.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -46,31 +48,31 @@ BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
 
 
-// CLightningControlDlg 对话框
+// CLightingControlDlg 对话框
 
 
 
-CLightningControlDlg::CLightningControlDlg(CWnd* pParent /*=nullptr*/)
-	: CDialogEx(IDD_LIGHTNINGCONTROL_DIALOG, pParent)
+CLightingControlDlg::CLightingControlDlg(CWnd* pParent /*=nullptr*/)
+	: CDialogEx(IDD_LIGHTINGCONTROL_DIALOG, pParent)
 {
-	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
 }
 
-void CLightningControlDlg::DoDataExchange(CDataExchange* pDX)
+void CLightingControlDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 }
 
-BEGIN_MESSAGE_MAP(CLightningControlDlg, CDialogEx)
+BEGIN_MESSAGE_MAP(CLightingControlDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 END_MESSAGE_MAP()
 
 
-// CLightningControlDlg 消息处理程序
+// CLightingControlDlg 消息处理程序
 
-BOOL CLightningControlDlg::OnInitDialog()
+BOOL CLightingControlDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
@@ -98,17 +100,46 @@ BOOL CLightningControlDlg::OnInitDialog()
 	//  执行此操作
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
-
+	
 	//ShowWindow(SW_MAXIMIZE); //初始化弹出时最大化
 
 	//ShowWindow(SW_MINIMIZE); //初始化弹出时最小化
 
 	// TODO: 在此添加额外的初始化代码
+	//设置软件标题名称
+	CString AppTitle = _T("灯光控制界面");//默认名称
+	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
+	if (!jsonSetting.isNull()) {
+		if (jsonSetting.isMember("SoftwareTitle"))
+		{
+			const char* s = jsonSetting["SoftwareTitle"].asCString();
+			int nLenW = ::MultiByteToWideChar(CP_UTF8, 0, s, -1, NULL, 0);
+			wchar_t* wszBuffer = new wchar_t[nLenW];
+			::MultiByteToWideChar(CP_UTF8, 0, s, -1, wszBuffer, nLenW);
+
+			// 将 Unicode 编码转换为 GB2312 编码（也就是简体中文编码）
+			int nLenA = ::WideCharToMultiByte(CP_ACP, 0, wszBuffer, -1, NULL, 0, NULL, NULL);
+			char* szBuffer = new char[nLenA];
+			::WideCharToMultiByte(CP_ACP, 0, wszBuffer, -1, szBuffer, nLenA, NULL, NULL);
+
+			// 输出结果
+			std::string strResult(szBuffer);
+			const char* tmp = strResult.c_str();
+			AppTitle = tmp;
+		}
+		else {
+			string pStrTitle = _UnicodeToUtf8(AppTitle);
+			// char* pStrTitle = CstringToWideCharArry(AppTitle);
+			jsonSetting["SoftwareTitle"] = pStrTitle;
+		}
+	}
+	WriteSetting(_T("Setting.json"), jsonSetting);
+	SetWindowText(AppTitle);
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
-void CLightningControlDlg::OnSysCommand(UINT nID, LPARAM lParam)
+void CLightingControlDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
 	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
 	{
@@ -125,7 +156,7 @@ void CLightningControlDlg::OnSysCommand(UINT nID, LPARAM lParam)
 //  来绘制该图标。  对于使用文档/视图模型的 MFC 应用程序，
 //  这将由框架自动完成。
 
-void CLightningControlDlg::OnPaint()
+void CLightingControlDlg::OnPaint()
 {
 	if (IsIconic())
 	{
@@ -152,7 +183,7 @@ void CLightningControlDlg::OnPaint()
 
 //当用户拖动最小化窗口时系统调用此函数取得光标
 //显示。
-HCURSOR CLightningControlDlg::OnQueryDragIcon()
+HCURSOR CLightingControlDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }

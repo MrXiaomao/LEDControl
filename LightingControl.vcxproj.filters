@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="LightningControl.h">
+    <ClInclude Include="LightingControl.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="LightningControlDlg.h">
+    <ClInclude Include="LightingControlDlg.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="framework.h">
@@ -33,30 +33,60 @@
     <ClInclude Include="pch.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Order.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Log.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MyConst.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LightningControl.cpp">
+    <ClCompile Include="LightingControl.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="LightningControlDlg.cpp">
+    <ClCompile Include="LightingControlDlg.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="pch.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Order.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Log.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MyConst.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="JSON\json_reader.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="JSON\json_value.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="JSON\json_writer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="LightningControl.rc">
+    <ResourceCompile Include="LightingControl.rc">
       <Filter>资源文件</Filter>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\LightningControl.rc2">
+    <None Include="res\LightingControl.rc2">
       <Filter>资源文件</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\LightningControl.ico">
+    <Image Include="res\LightingControl.ico">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="res\commassist.ico">
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>
