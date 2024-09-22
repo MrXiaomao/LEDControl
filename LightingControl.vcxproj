@@ -184,23 +184,30 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="comm.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="LEDButton.h" />
     <ClInclude Include="LightingControl.h" />
     <ClInclude Include="LightingControlDlg.h" />
     <ClInclude Include="Log.h" />
+    <ClInclude Include="MyButton.h" />
     <ClInclude Include="MyConst.h" />
     <ClInclude Include="Order.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="StdAfx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="comm.cpp" />
     <ClCompile Include="JSON\json_reader.cpp" />
     <ClCompile Include="JSON\json_value.cpp" />
     <ClCompile Include="JSON\json_writer.cpp" />
+    <ClCompile Include="LEDButton.cpp" />
     <ClCompile Include="LightingControl.cpp" />
     <ClCompile Include="LightingControlDlg.cpp" />
     <ClCompile Include="Log.cpp" />
+    <ClCompile Include="MyButton.cpp" />
     <ClCompile Include="MyConst.cpp" />
     <ClCompile Include="Order.cpp" />
     <ClCompile Include="pch.cpp">
@@ -209,12 +216,14 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="StdAfx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LightingControl.rc" />
   </ItemGroup>
   <ItemGroup>
     <None Include="res\LightingControl.rc2" />
+    <None Include="Setting.json" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\commassist.ico" />

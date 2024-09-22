@@ -1,4 +1,7 @@
 {
-	"Port_Detector" : 6001,
-	"SoftwareTitle" : "Lighting Control"
+	"BaudRate" : 115200,
+	"CheckBits" : 0,
+	"DataBits" : 8,
+	"SoftwareTitle" : "Lighting Control",
+	"StopBits" : 0
 }

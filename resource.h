@@ -22,6 +22,9 @@
 #define IDC_VOLT_LOOP                   1012
 #define IDC_ONE_TRIGGER                 1014
 #define IDC_EDIT2                       1015
+#define IDC_EDIT_STATUS                 1015
+#define IDC_BUTTON1                     1016
+#define IDC_LED_STATUS                  1016
 #define IDC_CHECK9                      1019
 #define IDC_CHECK10                     1020
 #define IDC_CHECK11                     1021
@@ -42,7 +45,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        131
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1016
+#define _APS_NEXT_CONTROL_VALUE         1017
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
