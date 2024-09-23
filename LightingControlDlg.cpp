@@ -57,14 +57,16 @@ END_MESSAGE_MAP()
 
 CLightingControlDlg::CLightingControlDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_LIGHTINGCONTROL_DIALOG, pParent),
+	pReceiveThread(nullptr),
 	nBaud(115200),nData(8),nStop(1),nCal(0),
 	LightSwitchA(0x00), LightSwitchB(0x00), 
 	m_strStatus(_T("")),
 	m_CalibrationTime(10),
 	m_LightDelay(9999),
 	m_LightWidth(10),
-	m_VoltA(1),
-	m_VoltB(1)
+	m_VoltA(2700),
+	m_VoltB(2700),
+	timer(0)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
 }
@@ -112,6 +114,7 @@ BEGIN_MESSAGE_MAP(CLightingControlDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_CHECKB6, &CLightingControlDlg::OnBnClickedCheckB6)
 	ON_BN_CLICKED(IDC_CHECKB7, &CLightingControlDlg::OnBnClickedCheckB7)
 	ON_BN_CLICKED(IDC_CHECKALL_B, &CLightingControlDlg::OnBnClickedCheckALL_B)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -419,9 +422,61 @@ void CLightingControlDlg::OnBnClickedOneTrigger()
 		MessageBox(_T("请先打开串口"), _T("提示"), MB_ICONINFORMATION);
 		return;//return 0;
 	}
+	EnableControl(false);
+	FPGAInit();
+	BackSend(Order::TriggerOn_A, 5);
+	SetTimer(1, m_CalibrationTime*1000, NULL); //设置定时器
+	return;
+}
+
+void CLightingControlDlg::EnableControl(BOOL flag)
+{
+	GetDlgItem(IDC_SERIALPORT_ID)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKA1)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKA2)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKA3)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKA4)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKA5)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKA6)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKA7)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKALL_A)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKB1)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKB2)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKB3)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKB4)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKB5)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKB6)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKB7)->EnableWindow(flag);
+	GetDlgItem(IDC_CHECKALL_B)->EnableWindow(flag); 
+	
+	GetDlgItem(IDC_VOLTA)->EnableWindow(flag);
+	GetDlgItem(IDC_VOLTB)->EnableWindow(flag);
+	GetDlgItem(IDC_LIGHTING_WIDTH)->EnableWindow(flag);
+	GetDlgItem(IDC_LIGHTING_DELAY)->EnableWindow(flag);
+	GetDlgItem(IDC_CALIBRATION_TIME)->EnableWindow(flag);
+}
+
+void CLightingControlDlg::FPGAInit()
+{
+	BackSend(Order::Reset, 5);
+	sendLEDwidth();
+	sendLEDDelay();
+	BackSend(Order::RegisterClockRate, 5);
+	sendTriggerHLPoints();
+	BackSend(Order::ShiftRegisterOn, 5);
+	BackSend(Order::ReferenceVolt_DAC, 5);
+	sendLightingVolt();
+	BackSend(Order::WriteData_DAC, 5);
+	BackSend(Order::CommonVolt_On, 5);
+	ShowStatus();
+}
+
+BOOL CLightingControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWaitingTime)
+{
+	DWORD dwBytesWritten = 5;
+	dwBytesWritten = (DWORD)msgLength;
 
 	BOOL bWriteStat;
-	DWORD dwBytesWritten = 5;
 	DWORD dwErrorFlags;
 	COMSTAT ComStat;
 
@@ -429,22 +484,88 @@ void CLightingControlDlg::OnBnClickedOneTrigger()
 	memset(&m_osWrite, 0, sizeof(OVERLAPPED));
 	m_osWrite.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 	ClearCommError(hCom, &dwErrorFlags, &ComStat);
-	bWriteStat = WriteFile(hCom, Order::Reset, dwBytesWritten, &dwBytesWritten, &m_osWrite);
+	bWriteStat = WriteFile(hCom,  msg, dwBytesWritten, &dwBytesWritten, &m_osWrite);
 	if (!bWriteStat)
 	{
 		if (GetLastError() == ERROR_IO_PENDING)
 		{
-			WaitForSingleObject(m_osWrite.hEvent, 1000);
+			WaitForSingleObject(m_osWrite.hEvent, maxWaitingTime);
 		}
 		//HandSendNum = 0;//return 0; 
-		return;
+		return 0;
 	}
-	ShowStatus();
+	
+	//清空缓存区
 	PurgeComm(hCom, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
 	//HandSendNum= dwBytesWritten;//return dwBytesWritten;
-	return;
+	Sleep(sleepTime);
+	return 1;
 }
 
+void CLightingControlDlg::sendLEDwidth()
+{
+	UpdateData(TRUE);
+	Order::LightingWidth[3] = m_LightWidth;
+	BackSend(Order::LightingWidth, 5);
+}
+
+void CLightingControlDlg::sendLEDDelay()
+{
+	UpdateData(TRUE);
+	Order::LightingDelay[2] = m_LightDelay / (16*16);
+	Order::LightingDelay[3] = m_LightDelay % (16*16);
+	BackSend(Order::LightingDelay, 5);
+}
+
+void CLightingControlDlg::sendTriggerHLPoints()
+{
+	UpdateData(TRUE);
+	int points = 11;
+	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
+	if (!jsonSetting.isNull()) {
+		if (jsonSetting.isMember("TriggerHLPoints"))
+		{
+			points = jsonSetting["TriggerHLPoints"].asInt();
+		}
+		else
+		{
+			jsonSetting["TriggerHLPoints"] = points;
+		}
+	}
+	if(points<256 && points>0)
+		Order::TriggerPointsSet[3] = points;
+	else
+	{
+		points = 255;
+		Order::TriggerPointsSet[3] = points;
+		jsonSetting["TriggerHLPoints"] = points;
+		MessageBox(_T("TriggerHLPoints is over range of 1~255,It's reset to 255. See it in Setting.json"), 
+			_T("提示"), MB_ICONINFORMATION);
+	}
+	WriteSetting(_T("Setting.json"), jsonSetting);
+	BackSend(Order::TriggerPointsSet, 5);
+}
+
+void CLightingControlDlg::sendShiftRegisterData()
+{
+	UpdateData(TRUE);
+	Order::LightingSwitch[2] = LightSwitchA;
+	Order::LightingSwitch[3] = LightSwitchB;
+	BackSend(Order::LightingSwitch, 5);
+}
+
+void CLightingControlDlg::sendLightingVolt()
+{
+	// 需要对电压到DAC数值的转换算法？？？？
+	UpdateData(TRUE);
+	int DAC_A = (int)((3100 - m_VoltA) / 0.085);
+	int DAC_B = (int)((3100 - m_VoltB) / 0.085);
+	Order::VoltA_Lighting[2] = DAC_A / (16 * 16);
+	Order::VoltA_Lighting[3] = DAC_A % (16 * 16);
+	BackSend(Order::LightingSwitch, 5);
+	Order::VoltB_Lighting[2] = DAC_B / (16 * 16);
+	Order::VoltB_Lighting[3] = DAC_B % (16 * 16);
+}
 
 void CLightingControlDlg::OnClose()
 {
@@ -693,4 +814,41 @@ void CLightingControlDlg::OnBnClickedCheckALL_B()
 		status = 0;
 	}
 	UpdateAllCheck(LightBit, status, 1);
+}
+
+void CLightingControlDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	switch (nIDEvent)
+	{
+	case 1:
+	{
+		timer++;
+		if (timer %3 == 1)
+		{
+			BackSend(Order::TriggerOff, 5); //停止触发
+			BackSend(Order::TriggerOn_B, 5); //B组触发
+		}
+		if (timer % 3 == 2)
+		{
+			BackSend(Order::TriggerOff, 5); //停止触发
+			BackSend(Order::TriggerOn_AB, 5); //B组触发
+		}
+		if (timer % 3 == 0)
+		{
+			BackSend(Order::TriggerOff, 5); //停止触发
+			KillTimer(1);
+			BackSend(Order::CommonVolt_Off, 5); //关闭外设电源
+			BackSend(Order::DAC_Off, 5); //关闭DAC配置
+
+			//重置部分参数
+			timer = 0;
+			EnableControl(TRUE);
+		}
+	}
+	break;
+	case 2:
+		break;
+	}
+	CDialogEx::OnTimer(nIDEvent);
 }

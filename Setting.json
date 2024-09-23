@@ -3,5 +3,6 @@
 	"CheckBits" : 0,
 	"DataBits" : 8,
 	"SoftwareTitle" : "Lighting Control",
-	"StopBits" : 0
+	"StopBits" : 0,
+	"TriggerHLPoints" : 11
 }
