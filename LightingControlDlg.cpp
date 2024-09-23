@@ -10,6 +10,7 @@
 
 #include "MyConst.h"
 #include "comm.h"
+#include "Order.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -56,7 +57,14 @@ END_MESSAGE_MAP()
 
 CLightingControlDlg::CLightingControlDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_LIGHTINGCONTROL_DIALOG, pParent),
-	nBaud(115200),nData(8),nStop(1),nCal(0), m_strStatus(_T(""))
+	nBaud(115200),nData(8),nStop(1),nCal(0),
+	LightSwitchA(0x00), LightSwitchB(0x00), 
+	m_strStatus(_T("")),
+	m_CalibrationTime(10),
+	m_LightDelay(9999),
+	m_LightWidth(10),
+	m_VoltA(1),
+	m_VoltB(1)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
 }
@@ -66,8 +74,19 @@ void CLightingControlDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_SERIALPORT_ID, m_comlist);
 	DDX_Control(pDX, IDC_CONNECT_SERIALPORT, m_comcontrol);
-	DDX_Text(pDX, IDC_EDIT_STATUS, m_strStatus);
 	DDX_Control(pDX, IDC_LED_STATUS, m_NetStatusLED);
+
+	DDX_Text(pDX, IDC_EDIT_STATUS, m_strStatus);
+	DDX_Text(pDX, IDC_CALIBRATION_TIME, m_CalibrationTime);
+	DDX_Text(pDX, IDC_LIGHTING_DELAY, m_LightDelay);
+	DDX_Text(pDX, IDC_LIGHTING_WIDTH, m_LightWidth);
+	DDX_Text(pDX, IDC_VOLTA, m_VoltA);
+	DDX_Text(pDX, IDC_VOLTB, m_VoltB);
+	DDV_MinMaxInt(pDX, m_CalibrationTime, 1, 255);
+	DDV_MinMaxInt(pDX, m_LightDelay, 1, 65535);
+	DDV_MinMaxInt(pDX, m_LightWidth, 1, 255);
+	DDV_MinMaxInt(pDX, m_VoltA, 2700, 3100);
+	DDV_MinMaxInt(pDX, m_VoltB, 2700, 3100);
 }
 
 BEGIN_MESSAGE_MAP(CLightingControlDlg, CDialogEx)
@@ -75,6 +94,24 @@ BEGIN_MESSAGE_MAP(CLightingControlDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_CONNECT_SERIALPORT, &CLightingControlDlg::OnComcontrol)
+	ON_BN_CLICKED(IDC_ONE_TRIGGER, &CLightingControlDlg::OnBnClickedOneTrigger)
+	ON_WM_CLOSE()
+	ON_BN_CLICKED(IDC_CHECKA1, &CLightingControlDlg::OnBnClickedCheckA1)
+	ON_BN_CLICKED(IDC_CHECKA2, &CLightingControlDlg::OnBnClickedCheckA2)
+	ON_BN_CLICKED(IDC_CHECKA3, &CLightingControlDlg::OnBnClickedCheckA3)
+	ON_BN_CLICKED(IDC_CHECKA4, &CLightingControlDlg::OnBnClickedCheckA4)
+	ON_BN_CLICKED(IDC_CHECKA5, &CLightingControlDlg::OnBnClickedCheckA5)
+	ON_BN_CLICKED(IDC_CHECKA6, &CLightingControlDlg::OnBnClickedCheckA6)
+	ON_BN_CLICKED(IDC_CHECKA7, &CLightingControlDlg::OnBnClickedCheckA7)
+	ON_BN_CLICKED(IDC_CHECKALL_A, &CLightingControlDlg::OnBnClickedCheckALL_A)
+	ON_BN_CLICKED(IDC_CHECKB1, &CLightingControlDlg::OnBnClickedCheckB1)
+	ON_BN_CLICKED(IDC_CHECKB2, &CLightingControlDlg::OnBnClickedCheckB2)
+	ON_BN_CLICKED(IDC_CHECKB3, &CLightingControlDlg::OnBnClickedCheckB3)
+	ON_BN_CLICKED(IDC_CHECKB4, &CLightingControlDlg::OnBnClickedCheckB4)
+	ON_BN_CLICKED(IDC_CHECKB5, &CLightingControlDlg::OnBnClickedCheckB5)
+	ON_BN_CLICKED(IDC_CHECKB6, &CLightingControlDlg::OnBnClickedCheckB6)
+	ON_BN_CLICKED(IDC_CHECKB7, &CLightingControlDlg::OnBnClickedCheckB7)
+	ON_BN_CLICKED(IDC_CHECKALL_B, &CLightingControlDlg::OnBnClickedCheckALL_B)
 END_MESSAGE_MAP()
 
 
@@ -242,7 +279,7 @@ DWORD CLightingControlDlg::ReadComm()
 	}
 	lpInBuffer[dwBytesRead] = NULL;
 	strTemp = lpInBuffer;
-	DataReceive += (BYTE)lpInBuffer;
+	//DataReceive += (BYTE)lpInBuffer;
 	
 	ShowStatus();
 	return 1;
@@ -360,7 +397,7 @@ void CLightingControlDlg::OnComcontrol()
 	}
 	else {
 		CloseComm(); //调用关闭串口函数CloseComm() 
-		// TerminateThread(pReceiveThread,0); 
+		//TerminateThread(pReceiveThread,0); 
 		ShowStatus();
 		m_comcontrol.SetText(_T("Connect"));
 		m_comcontrol.SetForeColor(RGB(255, 0, 0));
@@ -371,4 +408,289 @@ void CLightingControlDlg::OnComcontrol()
 		GetDlgItem(IDC_LOOP_TRIGGER)->EnableWindow(true); //设置循环触发按钮不可用 
 		return;
 	}
+}
+
+
+void CLightingControlDlg::OnBnClickedOneTrigger()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	if (ComIsOK == FALSE)
+	{
+		MessageBox(_T("请先打开串口"), _T("提示"), MB_ICONINFORMATION);
+		return;//return 0;
+	}
+
+	BOOL bWriteStat;
+	DWORD dwBytesWritten = 5;
+	DWORD dwErrorFlags;
+	COMSTAT ComStat;
+
+	OVERLAPPED m_osWrite;
+	memset(&m_osWrite, 0, sizeof(OVERLAPPED));
+	m_osWrite.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	ClearCommError(hCom, &dwErrorFlags, &ComStat);
+	bWriteStat = WriteFile(hCom, Order::Reset, dwBytesWritten, &dwBytesWritten, &m_osWrite);
+	if (!bWriteStat)
+	{
+		if (GetLastError() == ERROR_IO_PENDING)
+		{
+			WaitForSingleObject(m_osWrite.hEvent, 1000);
+		}
+		//HandSendNum = 0;//return 0; 
+		return;
+	}
+	ShowStatus();
+	PurgeComm(hCom, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
+	//HandSendNum= dwBytesWritten;//return dwBytesWritten;
+	return;
+}
+
+
+void CLightingControlDlg::OnClose()
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	TerminateThread(pReceiveThread, 0); //程序退出时,关闭串口监听线程
+	WaitForSingleObject(pReceiveThread, INFINITE);
+	CDialogEx::OnClose();
+}
+
+//刷新所有勾选框
+//state:二进制码，
+//status:勾选状态，1为勾选，0为不勾选
+//LightID，0为A组灯；1为B组灯
+void CLightingControlDlg::UpdateAllCheck(const BYTE stateBit, BOOL status, int LightID){
+	//A灯组
+	if(LightID==0){
+		//更新灯组值
+		if (status) {
+			LightSwitchA = LightSwitchA | stateBit; //勾选做或运算
+		}
+		else {
+			LightSwitchA = LightSwitchA & stateBit; //取消勾选做与运算
+		}
+
+		//更新勾选状态
+		((CButton*)GetDlgItem(IDC_CHECKA1))->SetCheck(LightSwitchA & 0b00000001);
+		((CButton*)GetDlgItem(IDC_CHECKA2))->SetCheck(LightSwitchA & 0b00000010);
+		((CButton*)GetDlgItem(IDC_CHECKA3))->SetCheck(LightSwitchA & 0b00000100);
+		((CButton*)GetDlgItem(IDC_CHECKA4))->SetCheck(LightSwitchA & 0b00001000);
+		((CButton*)GetDlgItem(IDC_CHECKA5))->SetCheck(LightSwitchA & 0b00100000);
+		((CButton*)GetDlgItem(IDC_CHECKA6))->SetCheck(LightSwitchA & 0b01000000);
+		((CButton*)GetDlgItem(IDC_CHECKA7))->SetCheck(LightSwitchA & 0b10000000);
+		((CButton*)GetDlgItem(IDC_CHECKALL_A))->SetCheck(LightSwitchA == 0b11101111);
+	}
+	
+	//B灯组
+	if (LightID == 1) {
+		//更新灯组值
+		if (status) {
+			LightSwitchB = LightSwitchB | stateBit;
+		}
+		else {
+			LightSwitchB = LightSwitchB & stateBit;
+		}
+		
+		//更新勾选状态
+		((CButton*)GetDlgItem(IDC_CHECKB1))->SetCheck(LightSwitchB & 0b00000001);
+		((CButton*)GetDlgItem(IDC_CHECKB2))->SetCheck(LightSwitchB & 0b00000010);
+		((CButton*)GetDlgItem(IDC_CHECKB3))->SetCheck(LightSwitchB & 0b00000100);
+		((CButton*)GetDlgItem(IDC_CHECKB4))->SetCheck(LightSwitchB & 0b00001000);
+		((CButton*)GetDlgItem(IDC_CHECKB5))->SetCheck(LightSwitchB & 0b00100000);
+		((CButton*)GetDlgItem(IDC_CHECKB6))->SetCheck(LightSwitchB & 0b01000000);
+		((CButton*)GetDlgItem(IDC_CHECKB7))->SetCheck(LightSwitchB & 0b10000000);
+		((CButton*)GetDlgItem(IDC_CHECKALL_B))->SetCheck(LightSwitchB == 0b11101111);
+	}
+}
+
+
+void CLightingControlDlg::OnBnClickedCheckA1()
+{
+	BYTE LightBit = 0b00000001;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKA1))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 0);
+}
+
+void CLightingControlDlg::OnBnClickedCheckA2()
+{
+	BYTE LightBit = 0b00000010;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKA2))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 0);
+}
+
+void CLightingControlDlg::OnBnClickedCheckA3()
+{
+	BYTE LightBit = 0b00000100;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKA3))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 0);
+}
+
+void CLightingControlDlg::OnBnClickedCheckA4()
+{
+	BYTE LightBit = 0b00001000;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKA4))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 0);
+}
+
+void CLightingControlDlg::OnBnClickedCheckA5()
+{
+	BYTE LightBit = 0b00100000;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKA5))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 0);
+}
+
+void CLightingControlDlg::OnBnClickedCheckA6()
+{
+	BYTE LightBit = 0b01000000;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKA6))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 0);
+}
+
+void CLightingControlDlg::OnBnClickedCheckA7()
+{
+	BYTE LightBit = 0b10000000;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKA7))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 0);
+}
+
+void CLightingControlDlg::OnBnClickedCheckALL_A()
+{
+	BYTE LightBit = 0b11101111;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKALL_A))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 0);
+}
+
+void CLightingControlDlg::OnBnClickedCheckB1()
+{
+	BYTE LightBit = 0b00000001;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKB1))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 1);
+}
+
+void CLightingControlDlg::OnBnClickedCheckB2()
+{
+	BYTE LightBit = 0b00000010;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKB2))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 1);
+}
+
+void CLightingControlDlg::OnBnClickedCheckB3()
+{
+	BYTE LightBit = 0b00000100;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKB3))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 1);
+}
+
+void CLightingControlDlg::OnBnClickedCheckB4()
+{
+	BYTE LightBit = 0b00001000;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKB4))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 1);
+}
+
+void CLightingControlDlg::OnBnClickedCheckB5()
+{
+	BYTE LightBit = 0b00100000;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKB5))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 1);
+}
+
+void CLightingControlDlg::OnBnClickedCheckB6()
+{
+	BYTE LightBit = 0b01000000;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKB6))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 1);
+}
+
+void CLightingControlDlg::OnBnClickedCheckB7()
+{
+	BYTE LightBit = 0b10000000;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKB7))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 1);
+}
+
+void CLightingControlDlg::OnBnClickedCheckALL_B()
+{
+	BYTE LightBit = 0b11101111;
+	BOOL status = 1;
+	int state = ((CButton*)GetDlgItem(IDC_CHECKALL_B))->GetCheck();
+	if (state != 1) {
+		LightBit = 0b11101111 & (~LightBit); //非勾选状态
+		status = 0;
+	}
+	UpdateAllCheck(LightBit, status, 1);
 }
