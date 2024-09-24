@@ -6,6 +6,8 @@
 
 #include "MyButton.h"
 #include "LEDButton.h"
+#include <vector>
+using namespace std;
 
 // CLightingControlDlg 对话框
 class CLightingControlDlg : public CDialogEx
@@ -14,11 +16,27 @@ class CLightingControlDlg : public CDialogEx
 public:
 	CLightingControlDlg(CWnd* pParent = nullptr);	// 标准构造函数
 	CWinThread* pReceiveThread;
+	//初始化状态栏
+	void InitBarSettings();
+	//刷新日志内容
 	void ShowStatus();
-	// 更新勾选框状态
-	void UpdateAllCheck(const BYTE stateBit, BOOL status, int LightID); 
+	
+	/*添加日志信息
+	* info 待添加的信息
+	* isShow 控制是否在界面显示该条日志
+	*/
+	void PrintLog(CString info, BOOL isShow = TRUE);
+
+	//更新勾选框对应的数值
+	void UpdateCheckValue(const BYTE stateBit, BOOL status, int LightID); 
+	//更新LED勾选状态
+	void UpdateLEDCheck();
+	//读取界面的各个控件的上一次关闭界面时的参数
+	void InitSettingByHistoryInput();
 	//读取串口
 	DWORD ReadComm();
+	//读取预设电压json文件的数据
+	BOOL ReadVoltFile(const CString file);
 
 	/*阻塞式发送，串口发送数据到FPGA，直到检测到指令反馈成功或者等待超时才退出。
 	* msg 发送信息
@@ -49,13 +67,17 @@ public:
 	//所有参数设置控件是否可用，在正常工作时都禁用，其他时候恢复。
 	void EnableControl(BOOL flag);
 
+	CStatusBar m_statusBar; // 状态栏
 	int nBaud; //波特率
 	int nData; //数据位
 	int nStop; //停止位
 	int nCal;  //校验位
-	BYTE LightSwitchA; //灯光开关控制A,1个字节，八个bit，00000000。从右往左数第五位是无效位。
-	BYTE LightSwitchB; //灯光开关控制B，1个字节，八个bit，00000000。从右往左数第五位是无效位。
+	BYTE m_LightSwitchA; //灯光开关控制A,1个字节，八个bit，00000000。从右往左数第五位是无效位。
+	BYTE m_LightSwitchB; //灯光开关控制B，1个字节，八个bit，00000000。从右往左数第五位是无效位。
 	int timer; // 计时器，满测量时长后则发送停止测量
+	CString VoltFile; //存放预设电压的json文件名及其路径
+	vector<int> vec_VoltA; //A组预设电压值，单位mV
+	vector<int> vec_VoltB; //B组预设电压值，单位mV
 
 // 对话框数据
 #ifdef AFX_DESIGN_TIME
@@ -75,21 +97,26 @@ protected:
 	virtual LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();
-	afx_msg void OnComcontrol(); //打开串口
+	//打开串口
+	afx_msg void OnComcontrol(); 
 	afx_msg HCURSOR OnQueryDragIcon(); 
 	afx_msg void OnClose();
+	//点击单次设置电压触发
 	afx_msg void OnBnClickedOneTrigger();
+	//点击循环设置电压触发
+	afx_msg void OnBnClickedLoopTrigger();
 	DECLARE_MESSAGE_MAP()
 public:
 	CComboBox m_comlist;
 	MyButton m_comcontrol;
-	CString m_strStatus;
+	CString m_strLog;
 	LEDButton m_NetStatusLED;
+	CEdit m_LogEdit;//日志文本控件
 	int m_CalibrationTime; //标定时长，单位s
 	int m_LightDelay; //LED发光延迟时间,单位us
 	int m_LightWidth; //LED发光宽度,单位为ns
-	int m_VoltA; //A组LED电压，单位mV
-	int m_VoltB; //B组LED电压，单位mV
+	int m_tempVoltA; //A组LED当前电压，单位mV
+	int m_tempVoltB; //B组LED当前电压，单位mV
 	
 	afx_msg void OnBnClickedCheckA1();
 	afx_msg void OnBnClickedCheckA2();
@@ -108,4 +135,6 @@ public:
 	afx_msg void OnBnClickedCheckB7();
 	afx_msg void OnBnClickedCheckALL_B();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	//选择电压预设文件
+	afx_msg void ChoseVoltLoopFile();
 };

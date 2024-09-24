@@ -11,6 +11,7 @@
 #include "MyConst.h"
 #include "comm.h"
 #include "Order.h"
+#include "Log.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -59,16 +60,19 @@ CLightingControlDlg::CLightingControlDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_LIGHTINGCONTROL_DIALOG, pParent),
 	pReceiveThread(nullptr),
 	nBaud(115200),nData(8),nStop(1),nCal(0),
-	LightSwitchA(0x00), LightSwitchB(0x00), 
-	m_strStatus(_T("")),
+	m_LightSwitchA(0x00), m_LightSwitchB(0x00), 
+	m_strLog(_T("")),
 	m_CalibrationTime(10),
 	m_LightDelay(9999),
 	m_LightWidth(10),
-	m_VoltA(2700),
-	m_VoltB(2700),
-	timer(0)
+	m_tempVoltA(2700),
+	m_tempVoltB(2700),
+	timer(0),
+	VoltFile(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
+	vec_VoltA.resize(0);
+	vec_VoltB.resize(0);
 }
 
 void CLightingControlDlg::DoDataExchange(CDataExchange* pDX)
@@ -78,17 +82,18 @@ void CLightingControlDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_CONNECT_SERIALPORT, m_comcontrol);
 	DDX_Control(pDX, IDC_LED_STATUS, m_NetStatusLED);
 
-	DDX_Text(pDX, IDC_EDIT_STATUS, m_strStatus);
+	DDX_Text(pDX, IDC_EDIT_LOG, m_strLog);
 	DDX_Text(pDX, IDC_CALIBRATION_TIME, m_CalibrationTime);
 	DDX_Text(pDX, IDC_LIGHTING_DELAY, m_LightDelay);
 	DDX_Text(pDX, IDC_LIGHTING_WIDTH, m_LightWidth);
-	DDX_Text(pDX, IDC_VOLTA, m_VoltA);
-	DDX_Text(pDX, IDC_VOLTB, m_VoltB);
+	DDX_Text(pDX, IDC_VOLTA, m_tempVoltA);
+	DDX_Text(pDX, IDC_VOLTB, m_tempVoltB);
 	DDV_MinMaxInt(pDX, m_CalibrationTime, 1, 255);
 	DDV_MinMaxInt(pDX, m_LightDelay, 1, 65535);
-	DDV_MinMaxInt(pDX, m_LightWidth, 1, 255);
-	DDV_MinMaxInt(pDX, m_VoltA, 2700, 3100);
-	DDV_MinMaxInt(pDX, m_VoltB, 2700, 3100);
+	DDV_MinMaxInt(pDX, m_LightWidth, 1, 2550);
+	DDV_MinMaxInt(pDX, m_tempVoltA, 2700, 3100);
+	DDV_MinMaxInt(pDX, m_tempVoltB, 2700, 3100);
+	DDX_Control(pDX, IDC_EDIT_LOG, m_LogEdit);
 }
 
 BEGIN_MESSAGE_MAP(CLightingControlDlg, CDialogEx)
@@ -115,6 +120,8 @@ BEGIN_MESSAGE_MAP(CLightingControlDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_CHECKB7, &CLightingControlDlg::OnBnClickedCheckB7)
 	ON_BN_CLICKED(IDC_CHECKALL_B, &CLightingControlDlg::OnBnClickedCheckALL_B)
 	ON_WM_TIMER()
+	ON_BN_CLICKED(IDC_VOLT_LOOP_FILE, &CLightingControlDlg::ChoseVoltLoopFile)
+	ON_BN_CLICKED(IDC_LOOP_TRIGGER, &CLightingControlDlg::OnBnClickedLoopTrigger)
 END_MESSAGE_MAP()
 
 
@@ -183,9 +190,20 @@ BOOL CLightingControlDlg::OnInitDialog()
 	}
 	WriteSetting(_T("Setting.json"), jsonSetting);
 	SetWindowText(AppTitle);
+	
+	//---------------初始化界面输入参数，读取上一次的设置参数---------------
+	InitSettingByHistoryInput(); 
 
-	FindComm(); //调用自动找串口函数 
+	//---------------初始化状态栏---------------
+	InitBarSettings();
+
+	//----------调用自动找串口函数 ---------------
+	FindComm();
+
+	//------------设置控件初始状态的可用性--------
 	m_NetStatusLED.RefreshWindow(FALSE, _T("OFF"));//设置指示灯
+	GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(false); //设置单次触发按钮不可用 
+	GetDlgItem(IDC_LOOP_TRIGGER)->EnableWindow(false); //设置循环触发按钮不可用 
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -239,6 +257,155 @@ HCURSOR CLightingControlDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+void CLightingControlDlg::InitBarSettings() {
+	CRect rectDlg;
+	GetClientRect(rectDlg);//获得窗体的大小
+	// 添加状态栏
+	UINT nID[] = { 1001,1002 };
+	//创建状态栏
+	m_statusBar.Create(this);
+	//添加状态栏面板，参数为ID数组和面板数量
+	m_statusBar.SetIndicators(nID, sizeof(nID) / sizeof(UINT));
+	//设置面板序号，ID，样式和宽度，SBPS_NORMAL为普通样式，固定宽度，SBPS_STRETCH为弹簧样式，会自动扩展它的空间
+	m_statusBar.SetPaneInfo(0, 1001, SBPS_NORMAL, int(0.5 * rectDlg.Width()));
+	m_statusBar.SetPaneInfo(1, 1002, SBPS_NORMAL, int(0.5 * rectDlg.Width()));
+	//设置状态栏位置
+	RepositionBars(AFX_IDW_CONTROLBAR_FIRST, AFX_IDW_CONTROLBAR_LAST, 0);
+	//设置状态栏面板文本，参数为面板序号和对应文本
+	m_statusBar.SetPaneText(0, _T("ready"));
+	m_statusBar.SetPaneText(1, _T("日期"));
+	RepositionBars(AFX_IDW_CONTROLBAR_FIRST, AFX_IDW_CONTROLBAR_LAST, 0);
+	//开启定时器，刷新状态栏参数
+	SetTimer(3, 200, NULL);
+}
+
+void CLightingControlDlg::InitSettingByHistoryInput() {
+	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
+	if (!jsonSetting.isNull()) {
+		//m_tempVoltA
+		if (jsonSetting.isMember("tempVoltA")) {
+			m_tempVoltA = jsonSetting["tempVoltA"].asInt();
+		}
+		else {
+			jsonSetting["tempVoltA"] = m_tempVoltA;
+		}
+		//m_tempVoltB
+		if (jsonSetting.isMember("tempVoltB")) {
+			m_tempVoltB = jsonSetting["tempVoltB"].asInt();
+		}
+		else {
+			jsonSetting["tempVoltB"] = m_tempVoltB;
+		}
+		// m_CalibrationTime
+		if (jsonSetting.isMember("CalibrationTime")) {
+			m_CalibrationTime = jsonSetting["CalibrationTime"].asInt();
+		}
+		else {
+			jsonSetting["CalibrationTime"] = m_CalibrationTime;
+		}
+		// m_LightDelay
+		if (jsonSetting.isMember("LightDelay")) {
+			m_LightDelay = jsonSetting["LightDelay"].asInt();
+		}
+		else {
+			jsonSetting["LightDelay"] = m_LightDelay;
+		}
+		// m_LightWidth
+		if (jsonSetting.isMember("LightWidth")) {
+			m_LightWidth = jsonSetting["LightWidth"].asInt();
+		}
+		else {
+			jsonSetting["LightWidth"] = m_LightWidth;
+		}
+		//LED开关状态
+		if(jsonSetting.isMember("LightSwitchA")){
+			int valueA = jsonSetting["LightSwitchA"].asInt();
+			m_LightSwitchA = (BYTE) (valueA & 0xFF);
+		}
+		else{
+			jsonSetting["LightSwitchA"] = m_LightSwitchA;
+		}
+		//LED开关状态
+		if(jsonSetting.isMember("LightSwitchB")){
+			int valueB = jsonSetting["LightSwitchB"].asInt();
+			m_LightSwitchB = (BYTE) (valueB & 0xFF);
+		}
+		else{
+			jsonSetting["LightSwitchB"] = m_LightSwitchB;
+		}
+		
+	}
+	WriteSetting(_T("Setting.json"), jsonSetting);
+	//更新将数值刷新到控件上
+	UpdateData(FALSE);
+	//勾选框的状态刷新需要特别设定
+	UpdateLEDCheck(); 
+}
+
+BOOL CLightingControlDlg::ReadVoltFile(const CString file)
+{
+	//提醒用户选择预设电压json文件
+	if (file == _T("")) {
+		MessageBox(_T("You have not selected the volt loop file,you must choose it before 'Loop Trigger'"),
+			_T("error"), MB_ICONINFORMATION);
+		return FALSE;
+	}
+
+	int NumVoltA = 0;
+	int NumVoltB = 0;
+
+	Json::Value jsonVoltSetting = ReadSetting(file);
+	if (!jsonVoltSetting.isNull()) {
+		if (jsonVoltSetting.isMember("voltA"))
+		{
+			NumVoltA = jsonVoltSetting["voltA"].size();
+			if (NumVoltA > 0)
+			{
+				for (int i = 0; i < NumVoltA; i++) {
+					vec_VoltA.push_back(jsonVoltSetting["voltA"][i].asInt());
+				}
+			}
+		}
+		else {
+			MessageBox(_T("Cannot find 'voltA'. See it in ") + VoltFile,
+				_T("error"), MB_ICONINFORMATION);
+			return FALSE;
+		}
+		if (jsonVoltSetting.isMember("voltB"))
+		{
+			NumVoltB = jsonVoltSetting["voltB"].size();
+			if (NumVoltB > 0)
+			{
+				for (int i = 0; i < NumVoltB; i++) {
+					vec_VoltB.push_back(jsonVoltSetting["voltB"][i].asInt());
+				}
+			}
+		}
+		else
+		{
+			MessageBox(_T("Cannot find 'voltB'. See it in ") + VoltFile,
+				_T("error"), MB_ICONINFORMATION);
+			return FALSE;
+		}
+	}
+	
+	if (NumVoltA > 0 && (NumVoltA == NumVoltB)) {
+		m_tempVoltA = vec_VoltA[0]; //界面当前电压值更新
+		m_tempVoltB = vec_VoltB[0]; //界面当前电压值更新
+	}
+
+	//刷新界面控件的内容
+	UpdateData(FALSE);
+
+	//更新json中的"tempVoltA"，"tempVoltB"
+	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
+	if (!jsonSetting.isNull()) {
+		jsonSetting["tempVoltA"] = m_tempVoltA;
+		jsonSetting["tempVoltB"] = m_tempVoltB;
+	}
+	WriteSetting(_T("Setting.json"), jsonSetting);
+}
+
 LRESULT CLightingControlDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	// TODO: 在此添加专用代码和/或调用基类
@@ -251,7 +418,7 @@ LRESULT CLightingControlDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lPar
 	case WM_READCOMM:
 	{   //读串口消息 
 		ReadComm();
-		this->SendDlgItemMessage(IDC_EDIT_STATUS, WM_VSCROLL, SB_BOTTOM, 0); //滚动条始终在底部
+		this->SendDlgItemMessage(IDC_EDIT_LOG, WM_VSCROLL, SB_BOTTOM, 0); //滚动条始终在底部
 		break;
 	}
 	}
@@ -284,7 +451,7 @@ DWORD CLightingControlDlg::ReadComm()
 	strTemp = lpInBuffer;
 	//DataReceive += (BYTE)lpInBuffer;
 	
-	ShowStatus();
+	// ShowStatus();
 	return 1;
 }
 
@@ -311,7 +478,7 @@ void CLightingControlDlg::ShowStatus()
 	strData.Format(_T("%d"), nStop);
 	strCal.Format(_T("%d"), nCal);
 
-	m_strStatus = _T("串口: ") + comnum + _T("  ") + _T("状态: ") + _T("波特率: ") + strBaud +
+	m_strLog = _T("串口: ") + comnum + _T("  ") + _T("状态: ") + _T("波特率: ") + strBaud +
 		_T(", ") + _T("数据位: ") + strData + _T(", ") + _T("停止位: ") + strStop + _T(", ") + _T("校验位: ") + strCal;
 	UpdateData(FALSE);
 }
@@ -321,10 +488,6 @@ void CLightingControlDlg::OnComcontrol()
 	//获取配置参数，并连接串口
 	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
 
-	//nBaud = 115200;//波特率
-	//nData = 8;//数据位
-	//nStop = 1;//停止位
-	//nCal = 0;//校验位
 	if (!jsonSetting.isNull()) {
 		if (jsonSetting.isMember("BaudRate"))
 		{
@@ -384,7 +547,7 @@ void CLightingControlDlg::OnComcontrol()
 		if (ComIsOK)
 			pReceiveThread = AfxBeginThread(ThreadFunc, this, THREAD_PRIORITY_LOWEST);
 		//启动接收线程
-		ShowStatus();
+		// ShowStatus();
 		if (!ComIsOK)
 			m_comcontrol.SetWindowText(_T("Connect"));
 		else
@@ -395,24 +558,33 @@ void CLightingControlDlg::OnComcontrol()
 			m_comlist.EnableWindow(false); //设置串口号下拉框不可用
 			GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(true); //设置单次触发按钮可用 
 			GetDlgItem(IDC_LOOP_TRIGGER)->EnableWindow(true); //设置循环触发按钮可用 
+			GetDlgItem(IDC_VOLT_LOOP_FILE)->EnableWindow(true); //设置选择电压文件按钮可用 
+			
+			//日志打印
+			CString info = _T("Establish connection!");
+			PrintLog(info);
 		}
 		return;
 	}
 	else {
 		CloseComm(); //调用关闭串口函数CloseComm() 
+		CString info = _T("Disconnect!");
+		PrintLog(info);
+
 		//TerminateThread(pReceiveThread,0); 
-		ShowStatus();
+		// ShowStatus();
 		m_comcontrol.SetText(_T("Connect"));
 		m_comcontrol.SetForeColor(RGB(255, 0, 0));
 		m_NetStatusLED.RefreshWindow(FALSE, _T("OFF"));//设置指示灯
-		m_comlist.EnableWindow(true); //设置串口号下拉框可用 
+		m_comlist.EnableWindow(false); //设置串口号下拉框不可用 
 		
-		GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(true); //设置单次触发按钮不可用 
-		GetDlgItem(IDC_LOOP_TRIGGER)->EnableWindow(true); //设置循环触发按钮不可用 
+		GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(false); //设置单次触发按钮不可用 
+		GetDlgItem(IDC_LOOP_TRIGGER)->EnableWindow(false); //设置循环触发按钮不可用 
+		GetDlgItem(IDC_VOLT_LOOP_FILE)->EnableWindow(false); //设置选择电压文件按钮不可用 
+		
 		return;
 	}
 }
-
 
 void CLightingControlDlg::OnBnClickedOneTrigger()
 {
@@ -424,9 +596,41 @@ void CLightingControlDlg::OnBnClickedOneTrigger()
 	}
 	EnableControl(false);
 	FPGAInit();
+	sendLightingVolt();
+	BackSend(Order::WriteData_DAC, 5);
+	BackSend(Order::CommonVolt_On, 5);
 	BackSend(Order::TriggerOn_A, 5);
 	SetTimer(1, m_CalibrationTime*1000, NULL); //设置定时器
-	return;
+	
+	//日志打印
+	CString info = _T("Group A Trigger is open!");
+	PrintLog(info);
+}
+
+void CLightingControlDlg::OnBnClickedLoopTrigger()
+{	
+	//禁用控件
+	EnableControl(false);
+
+	//先读取参数，判断电压预设文件是否正常
+	if (!ReadVoltFile(VoltFile)) {
+		EnableControl(true);
+		return;
+	}
+
+	//先刷新各个控制的值
+	UpdateData(TRUE);
+
+	FPGAInit();
+	sendLightingVolt();
+	BackSend(Order::WriteData_DAC, 5);
+	BackSend(Order::CommonVolt_On, 5);
+	BackSend(Order::TriggerOn_A, 5);
+	SetTimer(2, m_CalibrationTime * 1000, NULL); //设置定时器
+
+	//日志打印
+	CString info = _T("Group A Trigger is open!");
+	PrintLog(info);
 }
 
 void CLightingControlDlg::EnableControl(BOOL flag)
@@ -463,12 +667,9 @@ void CLightingControlDlg::FPGAInit()
 	sendLEDDelay();
 	BackSend(Order::RegisterClockRate, 5);
 	sendTriggerHLPoints();
+	sendShiftRegisterData();
 	BackSend(Order::ShiftRegisterOn, 5);
 	BackSend(Order::ReferenceVolt_DAC, 5);
-	sendLightingVolt();
-	BackSend(Order::WriteData_DAC, 5);
-	BackSend(Order::CommonVolt_On, 5);
-	ShowStatus();
 }
 
 BOOL CLightingControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWaitingTime)
@@ -504,14 +705,12 @@ BOOL CLightingControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int 
 
 void CLightingControlDlg::sendLEDwidth()
 {
-	UpdateData(TRUE);
-	Order::LightingWidth[3] = m_LightWidth;
+	Order::LightingWidth[3] = m_LightWidth/10;
 	BackSend(Order::LightingWidth, 5);
 }
 
 void CLightingControlDlg::sendLEDDelay()
 {
-	UpdateData(TRUE);
 	Order::LightingDelay[2] = m_LightDelay / (16*16);
 	Order::LightingDelay[3] = m_LightDelay % (16*16);
 	BackSend(Order::LightingDelay, 5);
@@ -519,7 +718,6 @@ void CLightingControlDlg::sendLEDDelay()
 
 void CLightingControlDlg::sendTriggerHLPoints()
 {
-	UpdateData(TRUE);
 	int points = 11;
 	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
 	if (!jsonSetting.isNull()) {
@@ -548,81 +746,87 @@ void CLightingControlDlg::sendTriggerHLPoints()
 
 void CLightingControlDlg::sendShiftRegisterData()
 {
-	UpdateData(TRUE);
-	Order::LightingSwitch[2] = LightSwitchA;
-	Order::LightingSwitch[3] = LightSwitchB;
+	Order::LightingSwitch[2] = m_LightSwitchA;
+	Order::LightingSwitch[3] = m_LightSwitchB;
 	BackSend(Order::LightingSwitch, 5);
 }
 
 void CLightingControlDlg::sendLightingVolt()
 {
 	// 需要对电压到DAC数值的转换算法？？？？
-	UpdateData(TRUE);
-	int DAC_A = (int)((3100 - m_VoltA) / 0.085);
-	int DAC_B = (int)((3100 - m_VoltB) / 0.085);
+	int DAC_A = (int)((3100 - m_tempVoltA) / 0.085);
+	int DAC_B = (int)((3100 - m_tempVoltB) / 0.085);
+
 	Order::VoltA_Lighting[2] = DAC_A / (16 * 16);
 	Order::VoltA_Lighting[3] = DAC_A % (16 * 16);
-	BackSend(Order::LightingSwitch, 5);
+	BackSend(Order::VoltA_Lighting, 5);
+
 	Order::VoltB_Lighting[2] = DAC_B / (16 * 16);
 	Order::VoltB_Lighting[3] = DAC_B % (16 * 16);
+	BackSend(Order::VoltB_Lighting, 5);
+	
+	//日志打印
+	CString info;
+	info.Format(_T("Group A Volt:%d; Group B Volt:%d"), m_tempVoltA,m_tempVoltB);
+	PrintLog(info);
 }
 
-void CLightingControlDlg::OnClose()
-{
-	// TODO: 在此添加消息处理程序代码和/或调用默认值
-	TerminateThread(pReceiveThread, 0); //程序退出时,关闭串口监听线程
-	WaitForSingleObject(pReceiveThread, INFINITE);
-	CDialogEx::OnClose();
-}
-
-//刷新所有勾选框
+//刷新所有LED勾选框数值
 //state:二进制码，
 //status:勾选状态，1为勾选，0为不勾选
 //LightID，0为A组灯；1为B组灯
-void CLightingControlDlg::UpdateAllCheck(const BYTE stateBit, BOOL status, int LightID){
+void CLightingControlDlg::UpdateCheckValue(const BYTE stateBit, BOOL status, int LightID){
 	//A灯组
 	if(LightID==0){
-		//更新灯组值
 		if (status) {
-			LightSwitchA = LightSwitchA | stateBit; //勾选做或运算
+			m_LightSwitchA = m_LightSwitchA | stateBit; //勾选做或运算
 		}
 		else {
-			LightSwitchA = LightSwitchA & stateBit; //取消勾选做与运算
+			m_LightSwitchA = m_LightSwitchA & stateBit; //取消勾选做与运算
 		}
-
-		//更新勾选状态
-		((CButton*)GetDlgItem(IDC_CHECKA1))->SetCheck(LightSwitchA & 0b00000001);
-		((CButton*)GetDlgItem(IDC_CHECKA2))->SetCheck(LightSwitchA & 0b00000010);
-		((CButton*)GetDlgItem(IDC_CHECKA3))->SetCheck(LightSwitchA & 0b00000100);
-		((CButton*)GetDlgItem(IDC_CHECKA4))->SetCheck(LightSwitchA & 0b00001000);
-		((CButton*)GetDlgItem(IDC_CHECKA5))->SetCheck(LightSwitchA & 0b00100000);
-		((CButton*)GetDlgItem(IDC_CHECKA6))->SetCheck(LightSwitchA & 0b01000000);
-		((CButton*)GetDlgItem(IDC_CHECKA7))->SetCheck(LightSwitchA & 0b10000000);
-		((CButton*)GetDlgItem(IDC_CHECKALL_A))->SetCheck(LightSwitchA == 0b11101111);
 	}
 	
 	//B灯组
 	if (LightID == 1) {
-		//更新灯组值
 		if (status) {
-			LightSwitchB = LightSwitchB | stateBit;
+			m_LightSwitchB = m_LightSwitchB | stateBit;
 		}
 		else {
-			LightSwitchB = LightSwitchB & stateBit;
+			m_LightSwitchB = m_LightSwitchB & stateBit;
 		}
-		
-		//更新勾选状态
-		((CButton*)GetDlgItem(IDC_CHECKB1))->SetCheck(LightSwitchB & 0b00000001);
-		((CButton*)GetDlgItem(IDC_CHECKB2))->SetCheck(LightSwitchB & 0b00000010);
-		((CButton*)GetDlgItem(IDC_CHECKB3))->SetCheck(LightSwitchB & 0b00000100);
-		((CButton*)GetDlgItem(IDC_CHECKB4))->SetCheck(LightSwitchB & 0b00001000);
-		((CButton*)GetDlgItem(IDC_CHECKB5))->SetCheck(LightSwitchB & 0b00100000);
-		((CButton*)GetDlgItem(IDC_CHECKB6))->SetCheck(LightSwitchB & 0b01000000);
-		((CButton*)GetDlgItem(IDC_CHECKB7))->SetCheck(LightSwitchB & 0b10000000);
-		((CButton*)GetDlgItem(IDC_CHECKALL_B))->SetCheck(LightSwitchB == 0b11101111);
 	}
+	UpdateLEDCheck();
 }
 
+void CLightingControlDlg::UpdateLEDCheck() {
+	//A组LED
+	((CButton*)GetDlgItem(IDC_CHECKA1))->SetCheck(m_LightSwitchA & 0b00000001);
+	((CButton*)GetDlgItem(IDC_CHECKA2))->SetCheck(m_LightSwitchA & 0b00000010);
+	((CButton*)GetDlgItem(IDC_CHECKA3))->SetCheck(m_LightSwitchA & 0b00000100);
+	((CButton*)GetDlgItem(IDC_CHECKA4))->SetCheck(m_LightSwitchA & 0b00001000);
+	((CButton*)GetDlgItem(IDC_CHECKA5))->SetCheck(m_LightSwitchA & 0b00100000);
+	((CButton*)GetDlgItem(IDC_CHECKA6))->SetCheck(m_LightSwitchA & 0b01000000);
+	((CButton*)GetDlgItem(IDC_CHECKA7))->SetCheck(m_LightSwitchA & 0b10000000);
+	((CButton*)GetDlgItem(IDC_CHECKALL_A))->SetCheck(m_LightSwitchA == 0b11101111);
+
+	//B组LED
+	((CButton*)GetDlgItem(IDC_CHECKB1))->SetCheck(m_LightSwitchB & 0b00000001);
+	((CButton*)GetDlgItem(IDC_CHECKB2))->SetCheck(m_LightSwitchB & 0b00000010);
+	((CButton*)GetDlgItem(IDC_CHECKB3))->SetCheck(m_LightSwitchB & 0b00000100);
+	((CButton*)GetDlgItem(IDC_CHECKB4))->SetCheck(m_LightSwitchB & 0b00001000);
+	((CButton*)GetDlgItem(IDC_CHECKB5))->SetCheck(m_LightSwitchB & 0b00100000);
+	((CButton*)GetDlgItem(IDC_CHECKB6))->SetCheck(m_LightSwitchB & 0b01000000);
+	((CButton*)GetDlgItem(IDC_CHECKB7))->SetCheck(m_LightSwitchB & 0b10000000);
+	((CButton*)GetDlgItem(IDC_CHECKALL_B))->SetCheck(m_LightSwitchB == 0b11101111);
+}
+
+void CLightingControlDlg::ChoseVoltLoopFile()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	ChooseFile(VoltFile);
+	GetDlgItem(IDC_EDIT1)->SetWindowText(VoltFile);
+
+}
 
 void CLightingControlDlg::OnBnClickedCheckA1()
 {
@@ -633,7 +837,7 @@ void CLightingControlDlg::OnBnClickedCheckA1()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 0);
+	UpdateCheckValue(LightBit, status, 0);
 }
 
 void CLightingControlDlg::OnBnClickedCheckA2()
@@ -645,7 +849,7 @@ void CLightingControlDlg::OnBnClickedCheckA2()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 0);
+	UpdateCheckValue(LightBit, status, 0);
 }
 
 void CLightingControlDlg::OnBnClickedCheckA3()
@@ -657,7 +861,7 @@ void CLightingControlDlg::OnBnClickedCheckA3()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 0);
+	UpdateCheckValue(LightBit, status, 0);
 }
 
 void CLightingControlDlg::OnBnClickedCheckA4()
@@ -669,7 +873,7 @@ void CLightingControlDlg::OnBnClickedCheckA4()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 0);
+	UpdateCheckValue(LightBit, status, 0);
 }
 
 void CLightingControlDlg::OnBnClickedCheckA5()
@@ -681,7 +885,7 @@ void CLightingControlDlg::OnBnClickedCheckA5()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 0);
+	UpdateCheckValue(LightBit, status, 0);
 }
 
 void CLightingControlDlg::OnBnClickedCheckA6()
@@ -693,7 +897,7 @@ void CLightingControlDlg::OnBnClickedCheckA6()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 0);
+	UpdateCheckValue(LightBit, status, 0);
 }
 
 void CLightingControlDlg::OnBnClickedCheckA7()
@@ -705,7 +909,7 @@ void CLightingControlDlg::OnBnClickedCheckA7()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 0);
+	UpdateCheckValue(LightBit, status, 0);
 }
 
 void CLightingControlDlg::OnBnClickedCheckALL_A()
@@ -717,7 +921,7 @@ void CLightingControlDlg::OnBnClickedCheckALL_A()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 0);
+	UpdateCheckValue(LightBit, status, 0);
 }
 
 void CLightingControlDlg::OnBnClickedCheckB1()
@@ -729,7 +933,7 @@ void CLightingControlDlg::OnBnClickedCheckB1()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 1);
+	UpdateCheckValue(LightBit, status, 1);
 }
 
 void CLightingControlDlg::OnBnClickedCheckB2()
@@ -741,7 +945,7 @@ void CLightingControlDlg::OnBnClickedCheckB2()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 1);
+	UpdateCheckValue(LightBit, status, 1);
 }
 
 void CLightingControlDlg::OnBnClickedCheckB3()
@@ -753,7 +957,7 @@ void CLightingControlDlg::OnBnClickedCheckB3()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 1);
+	UpdateCheckValue(LightBit, status, 1);
 }
 
 void CLightingControlDlg::OnBnClickedCheckB4()
@@ -765,7 +969,7 @@ void CLightingControlDlg::OnBnClickedCheckB4()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 1);
+	UpdateCheckValue(LightBit, status, 1);
 }
 
 void CLightingControlDlg::OnBnClickedCheckB5()
@@ -777,7 +981,7 @@ void CLightingControlDlg::OnBnClickedCheckB5()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 1);
+	UpdateCheckValue(LightBit, status, 1);
 }
 
 void CLightingControlDlg::OnBnClickedCheckB6()
@@ -789,7 +993,7 @@ void CLightingControlDlg::OnBnClickedCheckB6()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 1);
+	UpdateCheckValue(LightBit, status, 1);
 }
 
 void CLightingControlDlg::OnBnClickedCheckB7()
@@ -801,7 +1005,7 @@ void CLightingControlDlg::OnBnClickedCheckB7()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 1);
+	UpdateCheckValue(LightBit, status, 1);
 }
 
 void CLightingControlDlg::OnBnClickedCheckALL_B()
@@ -813,7 +1017,7 @@ void CLightingControlDlg::OnBnClickedCheckALL_B()
 		LightBit = 0b11101111 & (~LightBit); //非勾选状态
 		status = 0;
 	}
-	UpdateAllCheck(LightBit, status, 1);
+	UpdateCheckValue(LightBit, status, 1);
 }
 
 void CLightingControlDlg::OnTimer(UINT_PTR nIDEvent)
@@ -828,11 +1032,19 @@ void CLightingControlDlg::OnTimer(UINT_PTR nIDEvent)
 		{
 			BackSend(Order::TriggerOff, 5); //停止触发
 			BackSend(Order::TriggerOn_B, 5); //B组触发
+			
+			//日志打印
+			CString info = _T("Group A Trigger is close.Group B Trigger is open!");
+			PrintLog(info);
 		}
 		if (timer % 3 == 2)
 		{
 			BackSend(Order::TriggerOff, 5); //停止触发
-			BackSend(Order::TriggerOn_AB, 5); //B组触发
+			BackSend(Order::TriggerOn_AB, 5); //AB组触发
+			
+			//日志打印
+			CString info = _T("Group A Trigger is close.Group AB Trigger is open!");
+			PrintLog(info);
 		}
 		if (timer % 3 == 0)
 		{
@@ -840,15 +1052,145 @@ void CLightingControlDlg::OnTimer(UINT_PTR nIDEvent)
 			KillTimer(1);
 			BackSend(Order::CommonVolt_Off, 5); //关闭外设电源
 			BackSend(Order::DAC_Off, 5); //关闭DAC配置
+			
+			//日志打印
+			CString info = _T("Group AB Trigger is close!");
+			PrintLog(info);
 
 			//重置部分参数
 			timer = 0;
+			//恢复部分控件可用
 			EnableControl(TRUE);
 		}
 	}
 	break;
 	case 2:
+	{
+		timer++;
+		
+		//提取当前属于第几组电压值
+		int VoltID = timer / 3;
+		//判断当前属于内循环哪一个状态
+		if (timer % 3 == 1)
+		{
+			BackSend(Order::TriggerOff, 5); //停止触发
+			BackSend(Order::TriggerOn_B, 5); //B组触发
+			
+			//日志打印
+			CString info = _T("Group A Trigger is close.Group B Trigger is open!");
+			PrintLog(info);
+		}
+		if (timer % 3 == 2)
+		{
+			BackSend(Order::TriggerOff, 5); //停止触发
+			BackSend(Order::TriggerOn_AB, 5); //AB组触发
+
+			//日志打印
+			CString info = _T("Group A Trigger is close.Group AB Trigger is open!");
+			PrintLog(info);
+		}
+		if (timer % 3 == 0)
+		{	
+			//结束所有循环
+			if (VoltID == vec_VoltA.size()) {
+				//结束最后一次触发
+				BackSend(Order::TriggerOff, 5); //停止触发
+				BackSend(Order::CommonVolt_Off, 5); //关闭外设电源
+				BackSend(Order::DAC_Off, 5); //关闭DAC配置
+				KillTimer(2);
+				
+				//重置部分参数
+				timer = 0;
+				vec_VoltA.resize(0);
+				vec_VoltB.resize(0);
+				EnableControl(TRUE);
+				
+				//日志打印
+				CString info = _T("Group AB Trigger is close!");
+				PrintLog(info);
+				info = _T("Finished all loop!");
+				PrintLog(info);
+			}
+			else {
+				//（1）结束上一次的内循环
+				BackSend(Order::TriggerOff, 5); //停止触发
+				BackSend(Order::CommonVolt_Off, 5); //关闭外设电源
+				BackSend(Order::DAC_Off, 5); //关闭DAC配置
+
+				//（2）-①更新电压，开始下一次内循环触发
+				m_tempVoltA = vec_VoltA[VoltID]; //界面当前电压值更新
+				m_tempVoltB = vec_VoltB[VoltID]; //界面当前电压值更新
+				sendLightingVolt();
+				BackSend(Order::WriteData_DAC, 5);
+				BackSend(Order::CommonVolt_On, 5);
+				BackSend(Order::TriggerOn_A, 5);
+
+				//（2）-②刷新界面控件的内容
+				UpdateData(FALSE);
+
+				//（3）更新json中的"tempVoltA"，"tempVoltB"
+				Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
+				if (!jsonSetting.isNull()) {
+					jsonSetting["tempVoltA"] = m_tempVoltA;
+					jsonSetting["tempVoltB"] = m_tempVoltB;
+				}
+				WriteSetting(_T("Setting.json"), jsonSetting);
+
+				//日志打印
+				CString info = _T("Group AB Trigger is close!");
+				PrintLog(info);
+			}			
+		}
+	}
 		break;
+	case 3:
+		CTime t = CTime::GetCurrentTime();
+		CString strInfo = t.Format(_T("%Y-%m-%d %H:%M:%S"));
+		m_statusBar.SetPaneText(1, strInfo);
 	}
 	CDialogEx::OnTimer(nIDEvent);
+}
+
+
+void CLightingControlDlg::OnClose()
+{
+	KillTimer(3);
+
+	if(ComIsOK) CloseComm(); //调用关闭串口函数CloseComm() 
+
+	// 保留界面的参数
+	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
+	if (!jsonSetting.isNull()) {
+		jsonSetting["LightSwitchA"] = m_LightSwitchA;
+		jsonSetting["LightSwitchB"] = m_LightSwitchB;
+		jsonSetting["tempVoltA"] = m_tempVoltA;
+		jsonSetting["tempVoltB"] = m_tempVoltB;
+		jsonSetting["CalibrationTime"] = m_CalibrationTime;
+		jsonSetting["LightDelay"] = m_LightDelay;
+		jsonSetting["LightWidth"] = m_LightWidth;
+	}
+	WriteSetting(_T("Setting.json"), jsonSetting);
+
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	TerminateThread(pReceiveThread, 0); //程序退出时,关闭串口监听线程
+	WaitForSingleObject(pReceiveThread, INFINITE);
+	CDialogEx::OnClose();
+}
+
+void CLightingControlDlg::PrintLog(CString info, BOOL isShow)
+{
+
+	// 添加日志到文件
+	CLog::SetPrefix(_T("LED"));
+	CLog::WriteMsg(info);
+
+	if (!isShow) return;
+
+	// 添加日志到界面
+	CTime t = CTime::GetCurrentTime();
+	CString strTime = t.Format(_T("[%Y-%m-%d %H:%M:%S]# "));
+	m_strLog = m_strLog + strTime + info + _T("\r\n");
+
+	UpdateData(FALSE);
+	m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); //每次刷新后都显示最底部
 }

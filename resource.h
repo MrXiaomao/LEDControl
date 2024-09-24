@@ -20,8 +20,9 @@
 #define IDC_CHECKALL_A                  1010
 #define IDC_VOLTA                       1011
 #define IDC_VOLT_LOOP                   1012
+#define IDC_VOLT_LOOP_FILE              1012
 #define IDC_ONE_TRIGGER                 1014
-#define IDC_EDIT_STATUS                 1015
+#define IDC_EDIT_LOG                    1015
 #define IDC_LED_STATUS                  1016
 #define IDC_CHECKB1                     1019
 #define IDC_CHECKB2                     1020
@@ -36,6 +37,7 @@
 #define IDC_LIGHTING_DELAY              1029
 #define IDC_CALIBRATION_TIME            1030
 #define IDC_LOOP_TRIGGER                1031
+#define IDC_EDIT1                       1032
 
 // Next default values for new objects
 // 
@@ -43,7 +45,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        131
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1017
+#define _APS_NEXT_CONTROL_VALUE         1033
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

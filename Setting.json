@@ -1,8 +1,15 @@
 {
 	"BaudRate" : 115200,
+	"CalibrationTime" : 10,
 	"CheckBits" : 0,
 	"DataBits" : 8,
+	"LightDelay" : 9999,
+	"LightSwitchA" : 7,
+	"LightSwitchB" : 8,
+	"LightWidth" : 10,
 	"SoftwareTitle" : "Lighting Control",
 	"StopBits" : 0,
-	"TriggerHLPoints" : 11
+	"TriggerHLPoints" : 11,
+	"tempVoltA" : 3000,
+	"tempVoltB" : 3000
 }

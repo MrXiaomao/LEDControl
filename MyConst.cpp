@@ -460,7 +460,7 @@ BOOL ChooseFile(CString& outPath) {
 	CString fileName = _T("");
 
 	CFileDialog dlgFile(TRUE, NULL, NULL, OFN_HIDEREADONLY,
-		_T("文件 (*.txt)|*.txt||"), NULL);
+		_T("文件 (*.json)|*.json||"), NULL);
 
 	if (dlgFile.DoModal() == IDOK)
 	{
