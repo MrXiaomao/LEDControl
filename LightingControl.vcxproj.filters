@@ -106,6 +106,7 @@
       <Filter>资源文件</Filter>
     </None>
     <None Include="Setting.json" />
+    <None Include="Volt.json" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\LightingControl.ico">

@@ -225,6 +225,7 @@
   <ItemGroup>
     <None Include="res\LightingControl.rc2" />
     <None Include="Setting.json" />
+    <None Include="Volt.json" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\commassist.ico" />

@@ -68,6 +68,7 @@ CLightingControlDlg::CLightingControlDlg(CWnd* pParent /*=nullptr*/)
 	m_tempVoltA(2700),
 	m_tempVoltB(2700),
 	timer(0),
+	DelayTimeofVoltOn(10),
 	VoltFile(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
@@ -88,11 +89,6 @@ void CLightingControlDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_LIGHTING_WIDTH, m_LightWidth);
 	DDX_Text(pDX, IDC_VOLTA, m_tempVoltA);
 	DDX_Text(pDX, IDC_VOLTB, m_tempVoltB);
-	DDV_MinMaxInt(pDX, m_CalibrationTime, 1, 255);
-	DDV_MinMaxInt(pDX, m_LightDelay, 1, 65535);
-	DDV_MinMaxInt(pDX, m_LightWidth, 1, 2550);
-	DDV_MinMaxInt(pDX, m_tempVoltA, 2700, 3100);
-	DDV_MinMaxInt(pDX, m_tempVoltB, 2700, 3100);
 	DDX_Control(pDX, IDC_EDIT_LOG, m_LogEdit);
 }
 
@@ -122,6 +118,11 @@ BEGIN_MESSAGE_MAP(CLightingControlDlg, CDialogEx)
 	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_VOLT_LOOP_FILE, &CLightingControlDlg::ChoseVoltLoopFile)
 	ON_BN_CLICKED(IDC_LOOP_TRIGGER, &CLightingControlDlg::OnBnClickedLoopTrigger)
+	ON_EN_KILLFOCUS(IDC_VOLTA, &CLightingControlDlg::OnEnKillfocusVoltA)
+	ON_EN_KILLFOCUS(IDC_VOLTB, &CLightingControlDlg::OnEnKillfocusVoltB)
+	ON_EN_KILLFOCUS(IDC_LIGHTING_WIDTH, &CLightingControlDlg::OnEnKillfocusLightWidth)
+	ON_EN_KILLFOCUS(IDC_LIGHTING_DELAY, &CLightingControlDlg::OnEnKillfocusLightDelay)
+	ON_EN_KILLFOCUS(IDC_CALIBRATION_TIME, &CLightingControlDlg::OnEnKillfocusCalibrationTime)
 END_MESSAGE_MAP()
 
 
@@ -186,6 +187,15 @@ BOOL CLightingControlDlg::OnInitDialog()
 			string pStrTitle = _UnicodeToUtf8(AppTitle);
 			// char* pStrTitle = CstringToWideCharArry(AppTitle);
 			jsonSetting["SoftwareTitle"] = pStrTitle;
+		}
+
+		if (jsonSetting.isMember("DelayTimeofVoltOn"))
+		{
+			DelayTimeofVoltOn = jsonSetting["DelayTimeofVoltOn"].asInt();
+		}
+		else
+		{
+			jsonSetting["DelayTimeofVoltOn"] = DelayTimeofVoltOn;
 		}
 	}
 	WriteSetting(_T("Setting.json"), jsonSetting);
@@ -344,6 +354,8 @@ void CLightingControlDlg::InitSettingByHistoryInput() {
 
 BOOL CLightingControlDlg::ReadVoltFile(const CString file)
 {
+	vec_VoltA.resize(0);
+	vec_VoltB.resize(0);
 	//提醒用户选择预设电压json文件
 	if (file == _T("")) {
 		MessageBox(_T("You have not selected the volt loop file,you must choose it before 'Loop Trigger'"),
@@ -354,6 +366,36 @@ BOOL CLightingControlDlg::ReadVoltFile(const CString file)
 	int NumVoltA = 0;
 	int NumVoltB = 0;
 
+	//读取配置文件中的电压阈值可设置范围
+	int minV = 2000;
+	int maxV = 3500;
+	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
+	if (!jsonSetting.isNull()) {
+		if (jsonSetting.isMember("MinVolt")) {
+			minV = jsonSetting["MinVolt"].asInt();
+		}
+		else
+		{
+			jsonSetting["MinVolt"] = minV;
+			CString info;
+			info.Format(_T("Warning：Cannot find key words 'MinVolt' in 'Setting.json' file, MinVolt is set to %d！"), minV);
+			PrintLog(info);
+		}
+
+		if (jsonSetting.isMember("MaxVolt")) {
+			maxV = jsonSetting["MaxVolt"].asInt();
+		}
+		else
+		{
+			jsonSetting["MaxVolt"] = maxV;
+			CString info;
+			info.Format(_T("Warning：Cannot find key words 'MaxVolt' in 'Setting.json' file, MinVolt is set to %d！"), maxV);
+			PrintLog(info);
+		}
+		WriteSetting(_T("Setting.json"), jsonSetting);
+	}
+
+	// 提取数据并做类型、数值是否在范围内的检查
 	Json::Value jsonVoltSetting = ReadSetting(file);
 	if (!jsonVoltSetting.isNull()) {
 		if (jsonVoltSetting.isMember("voltA"))
@@ -362,29 +404,69 @@ BOOL CLightingControlDlg::ReadVoltFile(const CString file)
 			if (NumVoltA > 0)
 			{
 				for (int i = 0; i < NumVoltA; i++) {
-					vec_VoltA.push_back(jsonVoltSetting["voltA"][i].asInt());
+					if (jsonVoltSetting["voltA"][i].isInt()) {
+						int volt = jsonVoltSetting["voltA"][i].asInt();
+						if (volt< minV || volt>maxV) {
+							CString info;
+							info.Format(_T("ERROR: %d of 'voltA' is over range:%d~%d,In file"),volt,minV,maxV);
+							info += file;
+							PrintLog(info);
+							vec_VoltA.resize(0);
+							return FALSE;
+						}
+						vec_VoltA.push_back(volt);
+					}
+					else
+					{
+						PrintLog(_T("ERROR: The input of 'voltA' is wrong; It must be set to an integer. In file ") + file);
+						return FALSE;
+					}
 				}
+			}
+			else
+			{
+				PrintLog(_T("ERROR: The input size of 'voltA' is zero. Please check the file in ") + file);
+				return FALSE;
 			}
 		}
 		else {
-			MessageBox(_T("Cannot find 'voltA'. See it in ") + VoltFile,
-				_T("error"), MB_ICONINFORMATION);
+			PrintLog(_T("ERROR: Cannot find 'voltA'. See it in ") + VoltFile);
 			return FALSE;
 		}
+
 		if (jsonVoltSetting.isMember("voltB"))
 		{
 			NumVoltB = jsonVoltSetting["voltB"].size();
+			
 			if (NumVoltB > 0)
 			{
 				for (int i = 0; i < NumVoltB; i++) {
-					vec_VoltB.push_back(jsonVoltSetting["voltB"][i].asInt());
+					if (jsonVoltSetting["voltB"][i].isInt()) {
+						int volt = jsonVoltSetting["voltB"][i].asInt();
+						if (volt< minV || volt>maxV) {
+							CString info;
+							info.Format(_T("ERROR: %d of 'voltB' is over range:%d~%d,In file"), volt, minV, maxV);
+							info += file;
+							PrintLog(info);
+							vec_VoltB.resize(0);
+							return FALSE;
+						}
+						vec_VoltB.push_back(volt);
+					}
+					else {
+						PrintLog(_T("ERROR: The input of 'voltB' is wrong; It must be set to an integer. In file ") + file);
+						return FALSE;
+					}
 				}
 			}
+			else{
+				PrintLog(_T("ERROR: The input size of 'voltB' is zero. Please check the file in ") + file);
+				return FALSE;
+			}			
 		}
 		else
 		{
-			MessageBox(_T("Cannot find 'voltB'. See it in ") + VoltFile,
-				_T("error"), MB_ICONINFORMATION);
+			PrintLog(_T("ERROR: Cannot find 'voltB'. See it in ") + VoltFile);
 			return FALSE;
 		}
 	}
@@ -398,7 +480,6 @@ BOOL CLightingControlDlg::ReadVoltFile(const CString file)
 	UpdateData(FALSE);
 
 	//更新json中的"tempVoltA"，"tempVoltB"
-	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
 	if (!jsonSetting.isNull()) {
 		jsonSetting["tempVoltA"] = m_tempVoltA;
 		jsonSetting["tempVoltB"] = m_tempVoltB;
@@ -588,13 +669,19 @@ void CLightingControlDlg::OnComcontrol()
 
 void CLightingControlDlg::OnBnClickedOneTrigger()
 {
+	//先刷新各个控制的值
+	UpdateData(TRUE);
 	// TODO: 在此添加控件通知处理程序代码
 	if (ComIsOK == FALSE)
 	{
 		MessageBox(_T("请先打开串口"), _T("提示"), MB_ICONINFORMATION);
 		return;//return 0;
 	}
+	// 触发运行中部分控件不可用
 	EnableControl(false);
+	GetDlgItem(IDC_LOOP_TRIGGER)->EnableWindow(false);
+	GetDlgItem(IDC_VOLT_LOOP_FILE)->EnableWindow(false);
+
 	FPGAInit();
 	sendLightingVolt();
 	BackSend(Order::WriteData_DAC, 5);
@@ -611,10 +698,14 @@ void CLightingControlDlg::OnBnClickedLoopTrigger()
 {	
 	//禁用控件
 	EnableControl(false);
+	GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(false);
+	GetDlgItem(IDC_VOLT_LOOP_FILE)->EnableWindow(false);
 
 	//先读取参数，判断电压预设文件是否正常
 	if (!ReadVoltFile(VoltFile)) {
 		EnableControl(true);
+		GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(true);
+		GetDlgItem(IDC_VOLT_LOOP_FILE)->EnableWindow(true);
 		return;
 	}
 
@@ -624,7 +715,7 @@ void CLightingControlDlg::OnBnClickedLoopTrigger()
 	FPGAInit();
 	sendLightingVolt();
 	BackSend(Order::WriteData_DAC, 5);
-	BackSend(Order::CommonVolt_On, 5);
+	BackSend(Order::CommonVolt_On, 5, DelayTimeofVoltOn); //开启外设电源需要发送指令后延时，电源上升需要一定时间稳定
 	BackSend(Order::TriggerOn_A, 5);
 	SetTimer(2, m_CalibrationTime * 1000, NULL); //设置定时器
 
@@ -672,7 +763,7 @@ void CLightingControlDlg::FPGAInit()
 	BackSend(Order::ReferenceVolt_DAC, 5);
 }
 
-BOOL CLightingControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWaitingTime)
+BOOL CLightingControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWaitingTime, BOOL isShow)
 {
 	DWORD dwBytesWritten = 5;
 	dwBytesWritten = (DWORD)msgLength;
@@ -695,7 +786,11 @@ BOOL CLightingControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int 
 		//HandSendNum = 0;//return 0; 
 		return 0;
 	}
-	
+
+	CString info = _T("SEND HEX(%d):");
+	info = info + Char2HexCString(msg, msgLength);
+	PrintLog(info, isShow);
+
 	//清空缓存区
 	PurgeComm(hCom, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
 	//HandSendNum= dwBytesWritten;//return dwBytesWritten;
@@ -705,7 +800,7 @@ BOOL CLightingControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int 
 
 void CLightingControlDlg::sendLEDwidth()
 {
-	Order::LightingWidth[3] = m_LightWidth/10;
+	Order::LightingWidth[3] = m_LightWidth;
 	BackSend(Order::LightingWidth, 5);
 }
 
@@ -737,8 +832,7 @@ void CLightingControlDlg::sendTriggerHLPoints()
 		points = 255;
 		Order::TriggerPointsSet[3] = points;
 		jsonSetting["TriggerHLPoints"] = points;
-		MessageBox(_T("TriggerHLPoints is over range of 1~255,It's reset to 255. See it in Setting.json"), 
-			_T("提示"), MB_ICONINFORMATION);
+		PrintLog(_T("TriggerHLPoints is over range of 1~255,It's reset to 255. See it in Setting.json"));
 	}
 	WriteSetting(_T("Setting.json"), jsonSetting);
 	BackSend(Order::TriggerPointsSet, 5);
@@ -746,16 +840,21 @@ void CLightingControlDlg::sendTriggerHLPoints()
 
 void CLightingControlDlg::sendShiftRegisterData()
 {
-	Order::LightingSwitch[2] = m_LightSwitchA;
-	Order::LightingSwitch[3] = m_LightSwitchB;
+	Order::LightingSwitch[2] = m_LightSwitchB;
+	Order::LightingSwitch[3] = m_LightSwitchA;
 	BackSend(Order::LightingSwitch, 5);
 }
 
 void CLightingControlDlg::sendLightingVolt()
 {
 	// 需要对电压到DAC数值的转换算法？？？？
-	int DAC_A = (int)((3100 - m_tempVoltA) / 0.085);
-	int DAC_B = (int)((3100 - m_tempVoltB) / 0.085);
+	double p1_A, p2_A,p1_B, p2_B;
+	p1_A = -10.87;
+	p2_A = 33150.0;
+	p1_B = -10.92;
+	p2_B = 33240.0;
+	int DAC_A = (int)(m_tempVoltA * p1_A + p2_A);
+	int DAC_B = (int)(m_tempVoltB * p1_B + p2_B);
 
 	Order::VoltA_Lighting[2] = DAC_A / (16 * 16);
 	Order::VoltA_Lighting[3] = DAC_A % (16 * 16);
@@ -825,7 +924,7 @@ void CLightingControlDlg::ChoseVoltLoopFile()
 	// TODO: 在此添加控件通知处理程序代码
 	ChooseFile(VoltFile);
 	GetDlgItem(IDC_EDIT1)->SetWindowText(VoltFile);
-
+	ReadVoltFile(VoltFile);
 }
 
 void CLightingControlDlg::OnBnClickedCheckA1()
@@ -1056,11 +1155,15 @@ void CLightingControlDlg::OnTimer(UINT_PTR nIDEvent)
 			//日志打印
 			CString info = _T("Group AB Trigger is close!");
 			PrintLog(info);
+			info = _T("Finished single trigger!");
+			PrintLog(info);
 
 			//重置部分参数
 			timer = 0;
 			//恢复部分控件可用
 			EnableControl(TRUE);
+			GetDlgItem(IDC_LOOP_TRIGGER)->EnableWindow(true);
+			GetDlgItem(IDC_VOLT_LOOP_FILE)->EnableWindow(true);
 		}
 	}
 	break;
@@ -1104,7 +1207,9 @@ void CLightingControlDlg::OnTimer(UINT_PTR nIDEvent)
 				vec_VoltA.resize(0);
 				vec_VoltB.resize(0);
 				EnableControl(TRUE);
-				
+				GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(true); 
+				GetDlgItem(IDC_VOLT_LOOP_FILE)->EnableWindow(true);
+
 				//日志打印
 				CString info = _T("Group AB Trigger is close!");
 				PrintLog(info);
@@ -1116,13 +1221,17 @@ void CLightingControlDlg::OnTimer(UINT_PTR nIDEvent)
 				BackSend(Order::TriggerOff, 5); //停止触发
 				BackSend(Order::CommonVolt_Off, 5); //关闭外设电源
 				BackSend(Order::DAC_Off, 5); //关闭DAC配置
+				
+				//日志打印
+				CString info = _T("Group AB Trigger is close!");
+				PrintLog(info);
 
 				//（2）-①更新电压，开始下一次内循环触发
 				m_tempVoltA = vec_VoltA[VoltID]; //界面当前电压值更新
 				m_tempVoltB = vec_VoltB[VoltID]; //界面当前电压值更新
 				sendLightingVolt();
 				BackSend(Order::WriteData_DAC, 5);
-				BackSend(Order::CommonVolt_On, 5);
+				BackSend(Order::CommonVolt_On, 5, DelayTimeofVoltOn);
 				BackSend(Order::TriggerOn_A, 5);
 
 				//（2）-②刷新界面控件的内容
@@ -1135,10 +1244,6 @@ void CLightingControlDlg::OnTimer(UINT_PTR nIDEvent)
 					jsonSetting["tempVoltB"] = m_tempVoltB;
 				}
 				WriteSetting(_T("Setting.json"), jsonSetting);
-
-				//日志打印
-				CString info = _T("Group AB Trigger is close!");
-				PrintLog(info);
 			}			
 		}
 	}
@@ -1193,4 +1298,179 @@ void CLightingControlDlg::PrintLog(CString info, BOOL isShow)
 
 	UpdateData(FALSE);
 	m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); //每次刷新后都显示最底部
+}
+
+void CLightingControlDlg::OnEnKillfocusVoltA()
+{
+	UpdateData(TRUE);
+	
+	//读取配置文件中的阈值可设置下限
+	int minV = 2000;
+	int maxV = 3500;
+	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
+	if (!jsonSetting.isNull()) {
+		if (jsonSetting.isMember("MinVolt")) {
+			minV = jsonSetting["MinVolt"].asInt();
+		}
+		else
+		{
+			jsonSetting["MinVolt"] = minV;
+			CString info;
+			info.Format(_T("Warning：Cannot find key words 'MinVolt' in 'Setting.json' file, MinVolt is set to %d！"), minV);
+			PrintLog(info);
+		}
+
+		if (jsonSetting.isMember("MaxVolt")) {
+			maxV = jsonSetting["MaxVolt"].asInt();
+		}
+		else
+		{
+			jsonSetting["MaxVolt"] = maxV;
+			CString info;
+			info.Format(_T("Warning：Cannot find key words 'MaxVolt' in 'Setting.json' file, MinVolt is set to %d！"), maxV);
+			PrintLog(info);
+		}
+		WriteSetting(_T("Setting.json"), jsonSetting);
+	}
+
+	if ((m_tempVoltA < minV) || (m_tempVoltA > maxV))
+	{
+		//注意这里要先刷新值，再弹出框提醒用户，因为编辑框响应“光标移除”与“enter"键两种信号，后刷新值会导致重复触发本函数
+		if (m_tempVoltA > maxV)
+		{
+			m_tempVoltA = maxV;
+		}
+		else
+		{
+			m_tempVoltA = minV;
+		}
+		UpdateData(FALSE);
+
+		CString message;
+		message.Format(_T("The range of Volt GroupA is %d~%dmV\n"), minV,maxV);
+		MessageBox(message);
+	}
+}
+
+void CLightingControlDlg::OnEnKillfocusVoltB()
+{
+	UpdateData(TRUE);
+
+	//读取配置文件中的阈值可设置下限
+	int minV = 2000;
+	int maxV = 3500;
+	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
+	if (!jsonSetting.isNull()) {
+		if (jsonSetting.isMember("MinVolt")) {
+			minV = jsonSetting["MinVolt"].asInt();
+		}
+		else
+		{
+			jsonSetting["MinVolt"] = minV;
+			CString info;
+			info.Format(_T("Warning：Cannot find key words 'MinVolt' in 'Setting.json' file, MinVolt is set to %d！"), minV);
+			PrintLog(info);
+		}
+		if (jsonSetting.isMember("MaxVolt")) {
+			maxV = jsonSetting["MaxVolt"].asInt();
+		}
+		else
+		{
+			jsonSetting["MaxVolt"] = maxV;
+			CString info;
+			info.Format(_T("Warning：Cannot find key words 'MaxVolt' in 'Setting.json' file, MinVolt is set to %d！"), maxV);
+			PrintLog(info);
+		}
+		WriteSetting(_T("Setting.json"), jsonSetting);
+	}
+
+	if ((m_tempVoltB < minV) || (m_tempVoltB > maxV))
+	{
+		//注意这里要先刷新值，再弹出框提醒用户，因为编辑框响应“光标移除”与“enter"键两种信号，后刷新值会导致重复触发本函数
+		if (m_tempVoltB > maxV)
+		{
+			m_tempVoltB = maxV;
+		}
+		else
+		{
+			m_tempVoltB = minV;
+		}
+		UpdateData(FALSE);
+
+		CString message;
+		message.Format(_T("The range of Volt GroupB is %d~%dmV\n"), minV, maxV);
+		MessageBox(message);
+	}
+}
+
+void CLightingControlDlg::OnEnKillfocusLightWidth()
+{
+	UpdateData(TRUE);
+	int minValue = 1;
+	int maxValue = 255;
+	if ((m_LightWidth < minValue) || (m_LightWidth > maxValue))
+	{
+		//注意这里要先刷新值，再弹出框提醒用户，因为编辑框响应“光标移除”与“enter"键两种信号，后刷新值会导致重复触发本函数
+		if (m_LightWidth > maxValue)
+		{
+			m_LightWidth = maxValue;
+		}
+		else
+		{
+			m_LightWidth = minValue;
+		}
+		UpdateData(FALSE);
+
+		CString message;
+		message.Format(_T("The range of LightWidth is %d~%dns\n"), minValue, maxValue);
+		MessageBox(message);
+	}
+}
+
+void CLightingControlDlg::OnEnKillfocusLightDelay()
+{
+	UpdateData(TRUE);
+	int minValue = 1;
+	int maxValue = 65535;
+	if ((m_LightDelay < minValue) || (m_LightDelay > maxValue))
+	{
+		//注意这里要先刷新值，再弹出框提醒用户，因为编辑框响应“光标移除”与“enter"键两种信号，后刷新值会导致重复触发本函数
+		if (m_LightDelay > maxValue)
+		{
+			m_LightDelay = maxValue;
+		}
+		else
+		{
+			m_LightDelay = minValue;
+		}
+		UpdateData(FALSE);
+
+		CString message;
+		message.Format(_T("The range of LightDelay is %d~%dμs\n"), minValue, maxValue);
+		MessageBox(message);
+	}
+}
+
+void CLightingControlDlg::OnEnKillfocusCalibrationTime()
+{
+	UpdateData(TRUE);
+	int minValue = 1;
+	int maxValue = 255;
+	if ((m_CalibrationTime < minValue) || (m_CalibrationTime > maxValue))
+	{
+		//注意这里要先刷新值，再弹出框提醒用户，因为编辑框响应“光标移除”与“enter"键两种信号，后刷新值会导致重复触发本函数
+		if (m_CalibrationTime > maxValue)
+		{
+			m_CalibrationTime = maxValue;
+		}
+		else
+		{
+			m_CalibrationTime = minValue;
+		}
+		UpdateData(FALSE);
+
+		CString message;
+		message.Format(_T("The range of CalibrationTime is %d~%ds\n"), minValue, maxValue);
+		MessageBox(message);
+	}
 }

@@ -15,6 +15,7 @@ class CLightingControlDlg : public CDialogEx
 // 构造
 public:
 	CLightingControlDlg(CWnd* pParent = nullptr);	// 标准构造函数
+	
 	CWinThread* pReceiveThread;
 	//初始化状态栏
 	void InitBarSettings();
@@ -44,7 +45,7 @@ public:
 	* sleepTime 发送指令后程序Sleep时间，单位：ms
 	* maxWaitingTime 最大等待时间，单位：s
 	*/
-	BOOL BackSend(BYTE* msg, int msgLength, int sleepTime = 1, int maxWaitingTime = 1);
+	BOOL BackSend(BYTE* msg, int msgLength, int sleepTime = 1, int maxWaitingTime = 1, BOOL isShow=FALSE);
 
 	//配置FPGA，等待触发指令
 	void FPGAInit();
@@ -78,6 +79,7 @@ public:
 	CString VoltFile; //存放预设电压的json文件名及其路径
 	vector<int> vec_VoltA; //A组预设电压值，单位mV
 	vector<int> vec_VoltB; //B组预设电压值，单位mV
+	int DelayTimeofVoltOn; //外设电源开启时，需要延时一定时间，使其稳定，这个参数放在setting.json中可调,单位ms
 
 // 对话框数据
 #ifdef AFX_DESIGN_TIME
@@ -114,9 +116,9 @@ public:
 	CEdit m_LogEdit;//日志文本控件
 	int m_CalibrationTime; //标定时长，单位s
 	int m_LightDelay; //LED发光延迟时间,单位us
-	int m_LightWidth; //LED发光宽度,单位为ns
-	int m_tempVoltA; //A组LED当前电压，单位mV
-	int m_tempVoltB; //B组LED当前电压，单位mV
+	int m_LightWidth; //LED发光宽度,单位为x10ns
+	int m_tempVoltA;  //A组LED当前电压，单位mV
+	int m_tempVoltB;  //B组LED当前电压，单位mV
 	
 	afx_msg void OnBnClickedCheckA1();
 	afx_msg void OnBnClickedCheckA2();
@@ -137,4 +139,11 @@ public:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	//选择电压预设文件
 	afx_msg void ChoseVoltLoopFile();
+
+	//控件失去焦点，进行数值判断
+	afx_msg void OnEnKillfocusVoltA();
+	afx_msg void OnEnKillfocusVoltB();
+	afx_msg void OnEnKillfocusLightWidth(); 
+	afx_msg void OnEnKillfocusLightDelay();
+	afx_msg void OnEnKillfocusCalibrationTime();
 };
