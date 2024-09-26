@@ -47,6 +47,9 @@ public:
 	*/
 	BOOL BackSend(BYTE* msg, int msgLength, int sleepTime = 1, int maxWaitingTime = 1, BOOL isShow=FALSE);
 
+	//重置FPGA
+	void ResetFPGA();
+
 	//配置FPGA，等待触发指令
 	void FPGAInit();
 
@@ -146,4 +149,8 @@ public:
 	afx_msg void OnEnKillfocusLightWidth(); 
 	afx_msg void OnEnKillfocusLightDelay();
 	afx_msg void OnEnKillfocusCalibrationTime();
+	
+	//结束测量状态并重置FPGA
+	afx_msg void ResetSystem();
+	afx_msg void OnBnClickedClearLog();
 };

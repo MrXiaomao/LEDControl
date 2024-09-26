@@ -38,6 +38,9 @@
 #define IDC_CALIBRATION_TIME            1030
 #define IDC_LOOP_TRIGGER                1031
 #define IDC_EDIT1                       1032
+#define IDC_RESET_KERNAL                  1033
+#define IDC_BUTTON2                     1034
+#define IDC_CLEAR_LOG                   1034
 
 // Next default values for new objects
 // 
@@ -45,7 +48,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        131
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1033
+#define _APS_NEXT_CONTROL_VALUE         1035
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
