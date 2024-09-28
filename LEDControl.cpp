@@ -1,27 +1,27 @@
 ﻿
-// LightingControl.cpp: 定义应用程序的类行为。
+// LEDControl.cpp: 定义应用程序的类行为。
 //
 
 #include "pch.h"
 #include "framework.h"
-#include "LightingControl.h"
-#include "LightingControlDlg.h"
+#include "LEDControl.h"
+#include "LEDControlDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
 
-// CLightingControlApp
+// CLEDControlApp
 
-BEGIN_MESSAGE_MAP(CLightingControlApp, CWinApp)
+BEGIN_MESSAGE_MAP(CLEDControlApp, CWinApp)
 	ON_COMMAND(ID_HELP, &CWinApp::OnHelp)
 END_MESSAGE_MAP()
 
 
-// CLightingControlApp 构造
+// CLEDControlApp 构造
 
-CLightingControlApp::CLightingControlApp()
+CLEDControlApp::CLEDControlApp()
 {
 	// 支持重新启动管理器
 	m_dwRestartManagerSupportFlags = AFX_RESTART_MANAGER_SUPPORT_RESTART;
@@ -31,14 +31,14 @@ CLightingControlApp::CLightingControlApp()
 }
 
 
-// 唯一的 CLightingControlApp 对象
+// 唯一的 CLEDControlApp 对象
 
-CLightingControlApp theApp;
+CLEDControlApp theApp;
 
 
-// CLightingControlApp 初始化
+// CLEDControlApp 初始化
 
-BOOL CLightingControlApp::InitInstance()
+BOOL CLEDControlApp::InitInstance()
 {
 	// 如果一个运行在 Windows XP 上的应用程序清单指定要
 	// 使用 ComCtl32.dll 版本 6 或更高版本来启用可视化方式，
@@ -71,7 +71,7 @@ BOOL CLightingControlApp::InitInstance()
 	// 例如修改为公司或组织名
 	SetRegistryKey(_T("应用程序向导生成的本地应用程序"));
 
-	CLightingControlDlg dlg;
+	CLEDControlDlg dlg;
 	m_pMainWnd = &dlg;
 	INT_PTR nResponse = dlg.DoModal();
 	if (nResponse == IDOK)

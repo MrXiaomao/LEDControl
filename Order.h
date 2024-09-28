@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "afxwin.h"
-// Order Set of Lighting Control 
+// Order Set of LED Control 
 class Order
 {
 public:
@@ -12,10 +12,10 @@ public:
 	static BYTE Reset[]; 
 
 	//LED发光宽度，单位为×10ns，例如300ns对应的指令为：12 02 00 1E DD
-	static BYTE LightingWidth[]; 
+	static BYTE LEDWidth[]; 
 
 	//LED发光延迟时间，单位us，默认值9999us
-	static BYTE LightingDelay[];
+	static BYTE LEDDelay[];
 
 	//配置移位寄存器时钟频率， 不可更改
 	static BYTE RegisterClockRate[];
@@ -24,7 +24,7 @@ public:
 	static BYTE TriggerHLPointsSet[];
 
 	//配置移位寄存器数据,控制各个LED是否发光
-	static BYTE LightingSwitch[];
+	static BYTE LEDSwitch[];
 
 	//开启移位寄存器配置
 	static BYTE ShiftRegisterOn[];
@@ -33,8 +33,8 @@ public:
 	static BYTE ReferenceVolt_DAC[];
 
 	//配置DAC数据,控制灯光电压
-	static BYTE VoltA_Lighting[];
-	static BYTE VoltB_Lighting[];
+	static BYTE VoltA_LED[];
+	static BYTE VoltB_LED[];
 
 	//写入DAC数据
 	static BYTE WriteData_DAC[];

@@ -1,11 +1,11 @@
 ﻿//{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ 生成的包含文件。
-// 供 LightingControl.rc 使用
+// 供 LEDControl.rc 使用
 //
 #define IDM_ABOUTBOX                    0x0010
 #define IDD_ABOUTBOX                    100
 #define IDS_ABOUTBOX                    101
-#define IDD_LIGHTINGCONTROL_DIALOG      102
+#define IDD_LEDCONTROL_DIALOG      102
 #define IDR_MAINFRAME                   128
 #define IDI_ICON1                       130
 #define IDC_SERIALPORT_ID               1000
@@ -33,8 +33,8 @@
 #define IDC_CHECKB7                     1025
 #define IDC_CHECKALL_B                  1026
 #define IDC_VOLTB                       1027
-#define IDC_LIGHTING_WIDTH              1028
-#define IDC_LIGHTING_DELAY              1029
+#define IDC_LED_WIDTH              1028
+#define IDC_LED_DELAY              1029
 #define IDC_CALIBRATION_TIME            1030
 #define IDC_LOOP_TRIGGER                1031
 #define IDC_EDIT1                       1032

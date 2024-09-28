@@ -1,5 +1,5 @@
 ﻿
-// LightingControlDlg.h: 头文件
+// LEDControlDlg.h: 头文件
 //
 
 #pragma once
@@ -9,12 +9,12 @@
 #include <vector>
 using namespace std;
 
-// CLightingControlDlg 对话框
-class CLightingControlDlg : public CDialogEx
+// CLEDControlDlg 对话框
+class CLEDControlDlg : public CDialogEx
 {
 // 构造
 public:
-	CLightingControlDlg(CWnd* pParent = nullptr);	// 标准构造函数
+	CLEDControlDlg(CWnd* pParent = nullptr);	// 标准构造函数
 	
 	CWinThread* pReceiveThread;
 	//初始化状态栏
@@ -65,7 +65,7 @@ public:
 	void sendShiftRegisterData();
 
 	//配置DAC数据,也就是LED电压
-	void sendLightingVolt();
+	void sendLEDVolt();
 
 	//所有参数设置控件是否可用，在正常工作时都禁用，其他时候恢复。
 	void EnableControl(BOOL flag);
@@ -95,7 +95,7 @@ public:
 
 // 对话框数据
 #ifdef AFX_DESIGN_TIME
-	enum { IDD = IDD_LIGHTINGCONTROL_DIALOG };
+	enum { IDD = IDD_LEDCONTROL_DIALOG };
 #endif
 
 	protected:

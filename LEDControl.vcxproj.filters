@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="LightingControl.h">
+    <ClInclude Include="LEDControl.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="LightingControlDlg.h">
+    <ClInclude Include="LEDControlDlg.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="framework.h">
@@ -56,10 +56,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="LightingControl.cpp">
+    <ClCompile Include="LEDControl.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="LightingControlDlg.cpp">
+    <ClCompile Include="LEDControlDlg.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="pch.cpp">
@@ -97,19 +97,19 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="LightingControl.rc">
+    <ResourceCompile Include="LEDControl.rc">
       <Filter>资源文件</Filter>
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\LightingControl.rc2">
+    <None Include="res\LEDControl.rc2">
       <Filter>资源文件</Filter>
     </None>
     <None Include="Setting.json" />
     <None Include="Volt.json" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\LightingControl.ico">
+    <Image Include="res\LEDControl.ico">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="res\commassist.ico">

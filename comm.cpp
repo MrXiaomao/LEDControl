@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "stdafx.h" 
-#include "LightingControl.h" 
-#include "LightingControlDlg.h"
+#include "LEDControl.h" 
+#include "LEDControlDlg.h"
 #include "comm.h"
 char ConvertHexChar(char ch); 
 HANDLE hCom; //´®¿Ú¾ä±ú 

@@ -1,5 +1,5 @@
 ﻿
-// LightingControl.h: PROJECT_NAME 应用程序的主头文件
+// LEDControl.h: PROJECT_NAME 应用程序的主头文件
 //
 
 #pragma once
@@ -11,14 +11,14 @@
 #include "resource.h"		// 主符号
 
 
-// CLightingControlApp:
-// 有关此类的实现，请参阅 LightingControl.cpp
+// CLEDControlApp:
+// 有关此类的实现，请参阅 LEDControl.cpp
 //
 
-class CLightingControlApp : public CWinApp
+class CLEDControlApp : public CWinApp
 {
 public:
-	CLightingControlApp();
+	CLEDControlApp();
 
 // 重写
 public:
@@ -29,4 +29,4 @@ public:
 	DECLARE_MESSAGE_MAP()
 };
 
-extern CLightingControlApp theApp;
+extern CLEDControlApp theApp;

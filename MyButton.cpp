@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "stdafx.h"
-#include "LightingControl.h"
+#include "LEDControl.h"
 #include "MyButton.h"
 
 #ifdef _DEBUG

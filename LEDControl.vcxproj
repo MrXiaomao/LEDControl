@@ -22,7 +22,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{F5D19CC9-F7F9-4A38-91B6-9B01E3A8FB72}</ProjectGuid>
     <Keyword>MFCProj</Keyword>
-    <RootNamespace>LightingControl</RootNamespace>
+    <RootNamespace>LEDControl</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -188,8 +188,8 @@
     <ClInclude Include="comm.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="LEDButton.h" />
-    <ClInclude Include="LightingControl.h" />
-    <ClInclude Include="LightingControlDlg.h" />
+    <ClInclude Include="LEDControl.h" />
+    <ClInclude Include="LEDControlDlg.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="MyButton.h" />
     <ClInclude Include="MyConst.h" />
@@ -205,8 +205,8 @@
     <ClCompile Include="JSON\json_value.cpp" />
     <ClCompile Include="JSON\json_writer.cpp" />
     <ClCompile Include="LEDButton.cpp" />
-    <ClCompile Include="LightingControl.cpp" />
-    <ClCompile Include="LightingControlDlg.cpp" />
+    <ClCompile Include="LEDControl.cpp" />
+    <ClCompile Include="LEDControlDlg.cpp" />
     <ClCompile Include="Log.cpp" />
     <ClCompile Include="MyButton.cpp" />
     <ClCompile Include="MyConst.cpp" />
@@ -220,16 +220,16 @@
     <ClCompile Include="StdAfx.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="LightingControl.rc" />
+    <ResourceCompile Include="LEDControl.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\LightingControl.rc2" />
+    <None Include="res\LEDControl.rc2" />
     <None Include="Setting.json" />
     <None Include="Volt.json" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\commassist.ico" />
-    <Image Include="res\LightingControl.ico" />
+    <Image Include="res\LEDControl.ico" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />

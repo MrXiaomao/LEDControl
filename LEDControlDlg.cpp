@@ -1,11 +1,11 @@
 ﻿
-// LightingControlDlg.cpp: 实现文件
+// LEDControlDlg.cpp: 实现文件
 //
 
 #include "pch.h"
 #include "framework.h"
-#include "LightingControl.h"
-#include "LightingControlDlg.h"
+#include "LEDControl.h"
+#include "LEDControlDlg.h"
 #include "afxdialogex.h"
 
 #include "MyConst.h"
@@ -51,10 +51,10 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
 
-// CLightingControlDlg 对话框
+// CLEDControlDlg 对话框
 
-CLightingControlDlg::CLightingControlDlg(CWnd* pParent /*=nullptr*/)
-	: CDialogEx(IDD_LIGHTINGCONTROL_DIALOG, pParent),
+CLEDControlDlg::CLEDControlDlg(CWnd* pParent /*=nullptr*/)
+	: CDialogEx(IDD_LEDCONTROL_DIALOG, pParent),
 	  pReceiveThread(nullptr),
 	  config_nBaud(115200), config_nData(8), config_nStop(1), config_nCal(0),
 	  config_minV(2000), config_maxV(3500),
@@ -77,7 +77,7 @@ CLightingControlDlg::CLightingControlDlg(CWnd* pParent /*=nullptr*/)
 	vec_VoltB.resize(0);
 }
 
-void CLightingControlDlg::DoDataExchange(CDataExchange* pDX)
+void CLEDControlDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_SERIALPORT_ID, m_comlist);
@@ -86,51 +86,51 @@ void CLightingControlDlg::DoDataExchange(CDataExchange* pDX)
 
 	DDX_Text(pDX, IDC_EDIT_LOG, m_strLog);
 	DDX_Text(pDX, IDC_CALIBRATION_TIME, m_CalibrationTime);
-	DDX_Text(pDX, IDC_LIGHTING_DELAY, m_LightDelay);
-	DDX_Text(pDX, IDC_LIGHTING_WIDTH, m_LightWidth);
+	DDX_Text(pDX, IDC_LED_DELAY, m_LightDelay);
+	DDX_Text(pDX, IDC_LED_WIDTH, m_LightWidth);
 	DDX_Text(pDX, IDC_VOLTA, m_tempVoltA);
 	DDX_Text(pDX, IDC_VOLTB, m_tempVoltB);
 	DDX_Control(pDX, IDC_EDIT_LOG, m_LogEdit);
 }
 
-BEGIN_MESSAGE_MAP(CLightingControlDlg, CDialogEx)
+BEGIN_MESSAGE_MAP(CLEDControlDlg, CDialogEx)
 ON_WM_SYSCOMMAND()
 ON_WM_PAINT()
 ON_WM_QUERYDRAGICON()
-ON_BN_CLICKED(IDC_CONNECT_SERIALPORT, &CLightingControlDlg::OnComcontrol)
-ON_BN_CLICKED(IDC_ONE_TRIGGER, &CLightingControlDlg::OnBnClickedOneTrigger)
+ON_BN_CLICKED(IDC_CONNECT_SERIALPORT, &CLEDControlDlg::OnComcontrol)
+ON_BN_CLICKED(IDC_ONE_TRIGGER, &CLEDControlDlg::OnBnClickedOneTrigger)
 ON_WM_CLOSE()
-ON_BN_CLICKED(IDC_CHECKA1, &CLightingControlDlg::OnBnClickedCheckA1)
-ON_BN_CLICKED(IDC_CHECKA2, &CLightingControlDlg::OnBnClickedCheckA2)
-ON_BN_CLICKED(IDC_CHECKA3, &CLightingControlDlg::OnBnClickedCheckA3)
-ON_BN_CLICKED(IDC_CHECKA4, &CLightingControlDlg::OnBnClickedCheckA4)
-ON_BN_CLICKED(IDC_CHECKA5, &CLightingControlDlg::OnBnClickedCheckA5)
-ON_BN_CLICKED(IDC_CHECKA6, &CLightingControlDlg::OnBnClickedCheckA6)
-ON_BN_CLICKED(IDC_CHECKA7, &CLightingControlDlg::OnBnClickedCheckA7)
-ON_BN_CLICKED(IDC_CHECKALL_A, &CLightingControlDlg::OnBnClickedCheckALL_A)
-ON_BN_CLICKED(IDC_CHECKB1, &CLightingControlDlg::OnBnClickedCheckB1)
-ON_BN_CLICKED(IDC_CHECKB2, &CLightingControlDlg::OnBnClickedCheckB2)
-ON_BN_CLICKED(IDC_CHECKB3, &CLightingControlDlg::OnBnClickedCheckB3)
-ON_BN_CLICKED(IDC_CHECKB4, &CLightingControlDlg::OnBnClickedCheckB4)
-ON_BN_CLICKED(IDC_CHECKB5, &CLightingControlDlg::OnBnClickedCheckB5)
-ON_BN_CLICKED(IDC_CHECKB6, &CLightingControlDlg::OnBnClickedCheckB6)
-ON_BN_CLICKED(IDC_CHECKB7, &CLightingControlDlg::OnBnClickedCheckB7)
-ON_BN_CLICKED(IDC_CHECKALL_B, &CLightingControlDlg::OnBnClickedCheckALL_B)
+ON_BN_CLICKED(IDC_CHECKA1, &CLEDControlDlg::OnBnClickedCheckA1)
+ON_BN_CLICKED(IDC_CHECKA2, &CLEDControlDlg::OnBnClickedCheckA2)
+ON_BN_CLICKED(IDC_CHECKA3, &CLEDControlDlg::OnBnClickedCheckA3)
+ON_BN_CLICKED(IDC_CHECKA4, &CLEDControlDlg::OnBnClickedCheckA4)
+ON_BN_CLICKED(IDC_CHECKA5, &CLEDControlDlg::OnBnClickedCheckA5)
+ON_BN_CLICKED(IDC_CHECKA6, &CLEDControlDlg::OnBnClickedCheckA6)
+ON_BN_CLICKED(IDC_CHECKA7, &CLEDControlDlg::OnBnClickedCheckA7)
+ON_BN_CLICKED(IDC_CHECKALL_A, &CLEDControlDlg::OnBnClickedCheckALL_A)
+ON_BN_CLICKED(IDC_CHECKB1, &CLEDControlDlg::OnBnClickedCheckB1)
+ON_BN_CLICKED(IDC_CHECKB2, &CLEDControlDlg::OnBnClickedCheckB2)
+ON_BN_CLICKED(IDC_CHECKB3, &CLEDControlDlg::OnBnClickedCheckB3)
+ON_BN_CLICKED(IDC_CHECKB4, &CLEDControlDlg::OnBnClickedCheckB4)
+ON_BN_CLICKED(IDC_CHECKB5, &CLEDControlDlg::OnBnClickedCheckB5)
+ON_BN_CLICKED(IDC_CHECKB6, &CLEDControlDlg::OnBnClickedCheckB6)
+ON_BN_CLICKED(IDC_CHECKB7, &CLEDControlDlg::OnBnClickedCheckB7)
+ON_BN_CLICKED(IDC_CHECKALL_B, &CLEDControlDlg::OnBnClickedCheckALL_B)
 ON_WM_TIMER()
-ON_BN_CLICKED(IDC_VOLT_LOOP_FILE, &CLightingControlDlg::ChoseVoltLoopFile)
-ON_BN_CLICKED(IDC_LOOP_TRIGGER, &CLightingControlDlg::OnBnClickedLoopTrigger)
-ON_EN_KILLFOCUS(IDC_VOLTA, &CLightingControlDlg::OnEnKillfocusVoltA)
-ON_EN_KILLFOCUS(IDC_VOLTB, &CLightingControlDlg::OnEnKillfocusVoltB)
-ON_EN_KILLFOCUS(IDC_LIGHTING_WIDTH, &CLightingControlDlg::OnEnKillfocusLightWidth)
-ON_EN_KILLFOCUS(IDC_LIGHTING_DELAY, &CLightingControlDlg::OnEnKillfocusLightDelay)
-ON_EN_KILLFOCUS(IDC_CALIBRATION_TIME, &CLightingControlDlg::OnEnKillfocusCalibrationTime)
-ON_BN_CLICKED(IDC_RESET_KERNAL, &CLightingControlDlg::ResetSystem)
-ON_BN_CLICKED(IDC_CLEAR_LOG, &CLightingControlDlg::OnBnClickedClearLog)
+ON_BN_CLICKED(IDC_VOLT_LOOP_FILE, &CLEDControlDlg::ChoseVoltLoopFile)
+ON_BN_CLICKED(IDC_LOOP_TRIGGER, &CLEDControlDlg::OnBnClickedLoopTrigger)
+ON_EN_KILLFOCUS(IDC_VOLTA, &CLEDControlDlg::OnEnKillfocusVoltA)
+ON_EN_KILLFOCUS(IDC_VOLTB, &CLEDControlDlg::OnEnKillfocusVoltB)
+ON_EN_KILLFOCUS(IDC_LED_WIDTH, &CLEDControlDlg::OnEnKillfocusLightWidth)
+ON_EN_KILLFOCUS(IDC_LED_DELAY, &CLEDControlDlg::OnEnKillfocusLightDelay)
+ON_EN_KILLFOCUS(IDC_CALIBRATION_TIME, &CLEDControlDlg::OnEnKillfocusCalibrationTime)
+ON_BN_CLICKED(IDC_RESET_KERNAL, &CLEDControlDlg::ResetSystem)
+ON_BN_CLICKED(IDC_CLEAR_LOG, &CLEDControlDlg::OnBnClickedClearLog)
 END_MESSAGE_MAP()
 
-// CLightingControlDlg 消息处理程序
+// CLEDControlDlg 消息处理程序
 
-BOOL CLightingControlDlg::OnInitDialog()
+BOOL CLEDControlDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
@@ -218,7 +218,7 @@ BOOL CLightingControlDlg::OnInitDialog()
 	return TRUE; // 除非将焦点设置到控件，否则返回 TRUE
 }
 
-void CLightingControlDlg::OnSysCommand(UINT nID, LPARAM lParam)
+void CLEDControlDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
 	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
 	{
@@ -231,7 +231,7 @@ void CLightingControlDlg::OnSysCommand(UINT nID, LPARAM lParam)
 	}
 }
 
-void CLightingControlDlg::InitConfigSetting()
+void CLEDControlDlg::InitConfigSetting()
 {
 	CString info;
 	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
@@ -419,7 +419,7 @@ void CLightingControlDlg::InitConfigSetting()
 //  来绘制该图标。  对于使用文档/视图模型的 MFC 应用程序，
 //  这将由框架自动完成。
 
-void CLightingControlDlg::OnPaint()
+void CLEDControlDlg::OnPaint()
 {
 	if (IsIconic())
 	{
@@ -446,12 +446,12 @@ void CLightingControlDlg::OnPaint()
 
 // 当用户拖动最小化窗口时系统调用此函数取得光标
 // 显示。
-HCURSOR CLightingControlDlg::OnQueryDragIcon()
+HCURSOR CLEDControlDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-void CLightingControlDlg::InitBarSettings()
+void CLEDControlDlg::InitBarSettings()
 {
 	CRect rectDlg;
 	GetClientRect(rectDlg); // 获得窗体的大小
@@ -474,7 +474,7 @@ void CLightingControlDlg::InitBarSettings()
 	SetTimer(3, 200, NULL);
 }
 
-void CLightingControlDlg::InitSettingByHistoryInput()
+void CLEDControlDlg::InitSettingByHistoryInput()
 {
 	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
 	if (!jsonSetting.isNull())
@@ -552,7 +552,7 @@ void CLightingControlDlg::InitSettingByHistoryInput()
 	UpdateLEDCheck();
 }
 
-BOOL CLightingControlDlg::ReadVoltFile(const CString file)
+BOOL CLEDControlDlg::ReadVoltFile(const CString file)
 {
 	vec_VoltA.resize(0);
 	vec_VoltB.resize(0);
@@ -668,7 +668,7 @@ BOOL CLightingControlDlg::ReadVoltFile(const CString file)
 	return TRUE;
 }
 
-LRESULT CLightingControlDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CLEDControlDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 {
 	// TODO: 在此添加专用代码和/或调用基类
 	switch (message)
@@ -689,7 +689,7 @@ LRESULT CLightingControlDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lPar
 	return CDialogEx::WindowProc(message, wParam, lParam);
 }
 
-DWORD CLightingControlDlg::ReadComm()
+DWORD CLEDControlDlg::ReadComm()
 {
 	CString strTemp;
 	OVERLAPPED m_osRead;
@@ -718,7 +718,7 @@ DWORD CLightingControlDlg::ReadComm()
 	return 1;
 }
 
-void CLightingControlDlg::ShowStatus()
+void CLEDControlDlg::ShowStatus()
 {
 	// 状态栏显示状态
 	CString strTXcnt;
@@ -745,7 +745,7 @@ void CLightingControlDlg::ShowStatus()
 	UpdateData(FALSE);
 }
 
-void CLightingControlDlg::OnComcontrol()
+void CLEDControlDlg::OnComcontrol()
 {
 	// 获取配置参数，并连接串口
 	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
@@ -831,7 +831,7 @@ void CLightingControlDlg::OnComcontrol()
 	}
 }
 
-void CLightingControlDlg::OnBnClickedOneTrigger()
+void CLEDControlDlg::OnBnClickedOneTrigger()
 {
 	// 先锁死按键，防止用户误触
 	GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(false);
@@ -863,7 +863,7 @@ void CLightingControlDlg::OnBnClickedOneTrigger()
 			// ②FPGA初始化
 			FPGAInit();
 			// ③配置DAV数据，也就是设置电压
-			sendLightingVolt();
+			sendLEDVolt();
 			// ④写入DAC数据
 			BackSend(Order::WriteData_DAC, 5);
 			// ⑤开启电源，并延时指定时长
@@ -899,7 +899,7 @@ void CLightingControlDlg::OnBnClickedOneTrigger()
 	GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(true);
 }
 
-void CLightingControlDlg::OnBnClickedLoopTrigger()
+void CLEDControlDlg::OnBnClickedLoopTrigger()
 {
 	// 先禁用，防止用户多次点击
 	GetDlgItem(IDC_LOOP_TRIGGER)->EnableWindow(false);
@@ -942,7 +942,7 @@ void CLightingControlDlg::OnBnClickedLoopTrigger()
 		// ②FPGA初始化
 		FPGAInit();
 		// ③配置DAV数据，也就是设置第一组电压
-		sendLightingVolt();
+		sendLEDVolt();
 		// ④写入DAC数据
 		BackSend(Order::WriteData_DAC, 5);
 		// ⑤开启电源，并延时指定时长
@@ -980,7 +980,7 @@ void CLightingControlDlg::OnBnClickedLoopTrigger()
 	GetDlgItem(IDC_LOOP_TRIGGER)->EnableWindow(true);
 }
 
-void CLightingControlDlg::EnableControl(BOOL flag)
+void CLEDControlDlg::EnableControl(BOOL flag)
 {
 	GetDlgItem(IDC_CONNECT_SERIALPORT)->EnableWindow(flag);
 	GetDlgItem(IDC_VOLT_LOOP_FILE)->EnableWindow(flag);
@@ -1003,12 +1003,12 @@ void CLightingControlDlg::EnableControl(BOOL flag)
 
 	GetDlgItem(IDC_VOLTA)->EnableWindow(flag);
 	GetDlgItem(IDC_VOLTB)->EnableWindow(flag);
-	GetDlgItem(IDC_LIGHTING_WIDTH)->EnableWindow(flag);
-	GetDlgItem(IDC_LIGHTING_DELAY)->EnableWindow(flag);
+	GetDlgItem(IDC_LED_WIDTH)->EnableWindow(flag);
+	GetDlgItem(IDC_LED_DELAY)->EnableWindow(flag);
 	GetDlgItem(IDC_CALIBRATION_TIME)->EnableWindow(flag);
 }
 
-void CLightingControlDlg::FPGAInit()
+void CLEDControlDlg::FPGAInit()
 {
 	sendLEDwidth();
 	sendLEDDelay();
@@ -1019,7 +1019,7 @@ void CLightingControlDlg::FPGAInit()
 	BackSend(Order::ReferenceVolt_DAC, 5);
 }
 
-BOOL CLightingControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWaitingTime, BOOL isShow)
+BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWaitingTime, BOOL isShow)
 {
 	DWORD dwBytesWritten = 5;
 	dwBytesWritten = (DWORD)msgLength;
@@ -1060,40 +1060,40 @@ BOOL CLightingControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int 
 	return 1;
 }
 
-void CLightingControlDlg::sendLEDwidth()
+void CLEDControlDlg::sendLEDwidth()
 {
-	Order::LightingWidth[3] = m_LightWidth;
-	BackSend(Order::LightingWidth, 5);
+	Order::LEDWidth[3] = m_LightWidth;
+	BackSend(Order::LEDWidth, 5);
 }
 
-void CLightingControlDlg::sendLEDDelay()
+void CLEDControlDlg::sendLEDDelay()
 {
-	Order::LightingDelay[2] = m_LightDelay / (16 * 16);
-	Order::LightingDelay[3] = m_LightDelay % (16 * 16);
-	BackSend(Order::LightingDelay, 5);
+	Order::LEDDelay[2] = m_LightDelay / (16 * 16);
+	Order::LEDDelay[3] = m_LightDelay % (16 * 16);
+	BackSend(Order::LEDDelay, 5);
 }
 
-void CLightingControlDlg::sendShiftRegisterData()
+void CLEDControlDlg::sendShiftRegisterData()
 {
-	Order::LightingSwitch[2] = m_LightSwitchB;
-	Order::LightingSwitch[3] = m_LightSwitchA;
-	BackSend(Order::LightingSwitch, 5);
+	Order::LEDSwitch[2] = m_LightSwitchB;
+	Order::LEDSwitch[3] = m_LightSwitchA;
+	BackSend(Order::LEDSwitch, 5);
 }
 
-void CLightingControlDlg::sendLightingVolt()
+void CLEDControlDlg::sendLEDVolt()
 {
 	// 需要对电压到DAC数值的刻度曲线
 	// DAC = P1*Volt + P2
 	int DAC_A = (int)(m_tempVoltA * config_p1_A + config_p2_A);
 	int DAC_B = (int)(m_tempVoltB * config_p1_B + config_p2_B);
 
-	Order::VoltA_Lighting[2] = DAC_A / (16 * 16);
-	Order::VoltA_Lighting[3] = DAC_A % (16 * 16);
-	BackSend(Order::VoltA_Lighting, 5);
+	Order::VoltA_LED[2] = DAC_A / (16 * 16);
+	Order::VoltA_LED[3] = DAC_A % (16 * 16);
+	BackSend(Order::VoltA_LED, 5);
 
-	Order::VoltB_Lighting[2] = DAC_B / (16 * 16);
-	Order::VoltB_Lighting[3] = DAC_B % (16 * 16);
-	BackSend(Order::VoltB_Lighting, 5);
+	Order::VoltB_LED[2] = DAC_B / (16 * 16);
+	Order::VoltB_LED[3] = DAC_B % (16 * 16);
+	BackSend(Order::VoltB_LED, 5);
 
 	// 日志打印
 	CString info;
@@ -1105,7 +1105,7 @@ void CLightingControlDlg::sendLightingVolt()
 // state:二进制码，
 // status:勾选状态，1为勾选，0为不勾选
 // LightID，0为A组灯；1为B组灯
-void CLightingControlDlg::UpdateCheckValue(const BYTE stateBit, BOOL status, int LightID)
+void CLEDControlDlg::UpdateCheckValue(const BYTE stateBit, BOOL status, int LightID)
 {
 	// A灯组
 	if (LightID == 0)
@@ -1135,7 +1135,7 @@ void CLightingControlDlg::UpdateCheckValue(const BYTE stateBit, BOOL status, int
 	UpdateLEDCheck();
 }
 
-void CLightingControlDlg::UpdateLEDCheck()
+void CLEDControlDlg::UpdateLEDCheck()
 {
 	// A组LED
 	((CButton *)GetDlgItem(IDC_CHECKA1))->SetCheck(m_LightSwitchA & 0b00000001);
@@ -1158,7 +1158,7 @@ void CLightingControlDlg::UpdateLEDCheck()
 	((CButton *)GetDlgItem(IDC_CHECKALL_B))->SetCheck(m_LightSwitchB == 0b11101111);
 }
 
-void CLightingControlDlg::ChoseVoltLoopFile()
+void CLEDControlDlg::ChoseVoltLoopFile()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	ChooseFile(VoltFile);
@@ -1166,7 +1166,7 @@ void CLightingControlDlg::ChoseVoltLoopFile()
 	ReadVoltFile(VoltFile);
 }
 
-void CLightingControlDlg::OnBnClickedCheckA1()
+void CLEDControlDlg::OnBnClickedCheckA1()
 {
 	BYTE LightBit = 0b00000001;
 	BOOL status = 1;
@@ -1179,7 +1179,7 @@ void CLightingControlDlg::OnBnClickedCheckA1()
 	UpdateCheckValue(LightBit, status, 0);
 }
 
-void CLightingControlDlg::OnBnClickedCheckA2()
+void CLEDControlDlg::OnBnClickedCheckA2()
 {
 	BYTE LightBit = 0b00000010;
 	BOOL status = 1;
@@ -1192,7 +1192,7 @@ void CLightingControlDlg::OnBnClickedCheckA2()
 	UpdateCheckValue(LightBit, status, 0);
 }
 
-void CLightingControlDlg::OnBnClickedCheckA3()
+void CLEDControlDlg::OnBnClickedCheckA3()
 {
 	BYTE LightBit = 0b00000100;
 	BOOL status = 1;
@@ -1205,7 +1205,7 @@ void CLightingControlDlg::OnBnClickedCheckA3()
 	UpdateCheckValue(LightBit, status, 0);
 }
 
-void CLightingControlDlg::OnBnClickedCheckA4()
+void CLEDControlDlg::OnBnClickedCheckA4()
 {
 	BYTE LightBit = 0b00001000;
 	BOOL status = 1;
@@ -1218,7 +1218,7 @@ void CLightingControlDlg::OnBnClickedCheckA4()
 	UpdateCheckValue(LightBit, status, 0);
 }
 
-void CLightingControlDlg::OnBnClickedCheckA5()
+void CLEDControlDlg::OnBnClickedCheckA5()
 {
 	BYTE LightBit = 0b00100000;
 	BOOL status = 1;
@@ -1231,7 +1231,7 @@ void CLightingControlDlg::OnBnClickedCheckA5()
 	UpdateCheckValue(LightBit, status, 0);
 }
 
-void CLightingControlDlg::OnBnClickedCheckA6()
+void CLEDControlDlg::OnBnClickedCheckA6()
 {
 	BYTE LightBit = 0b01000000;
 	BOOL status = 1;
@@ -1244,7 +1244,7 @@ void CLightingControlDlg::OnBnClickedCheckA6()
 	UpdateCheckValue(LightBit, status, 0);
 }
 
-void CLightingControlDlg::OnBnClickedCheckA7()
+void CLEDControlDlg::OnBnClickedCheckA7()
 {
 	BYTE LightBit = 0b10000000;
 	BOOL status = 1;
@@ -1257,7 +1257,7 @@ void CLightingControlDlg::OnBnClickedCheckA7()
 	UpdateCheckValue(LightBit, status, 0);
 }
 
-void CLightingControlDlg::OnBnClickedCheckALL_A()
+void CLEDControlDlg::OnBnClickedCheckALL_A()
 {
 	BYTE LightBit = 0b11101111;
 	BOOL status = 1;
@@ -1270,7 +1270,7 @@ void CLightingControlDlg::OnBnClickedCheckALL_A()
 	UpdateCheckValue(LightBit, status, 0);
 }
 
-void CLightingControlDlg::OnBnClickedCheckB1()
+void CLEDControlDlg::OnBnClickedCheckB1()
 {
 	BYTE LightBit = 0b00000001;
 	BOOL status = 1;
@@ -1283,7 +1283,7 @@ void CLightingControlDlg::OnBnClickedCheckB1()
 	UpdateCheckValue(LightBit, status, 1);
 }
 
-void CLightingControlDlg::OnBnClickedCheckB2()
+void CLEDControlDlg::OnBnClickedCheckB2()
 {
 	BYTE LightBit = 0b00000010;
 	BOOL status = 1;
@@ -1296,7 +1296,7 @@ void CLightingControlDlg::OnBnClickedCheckB2()
 	UpdateCheckValue(LightBit, status, 1);
 }
 
-void CLightingControlDlg::OnBnClickedCheckB3()
+void CLEDControlDlg::OnBnClickedCheckB3()
 {
 	BYTE LightBit = 0b00000100;
 	BOOL status = 1;
@@ -1309,7 +1309,7 @@ void CLightingControlDlg::OnBnClickedCheckB3()
 	UpdateCheckValue(LightBit, status, 1);
 }
 
-void CLightingControlDlg::OnBnClickedCheckB4()
+void CLEDControlDlg::OnBnClickedCheckB4()
 {
 	BYTE LightBit = 0b00001000;
 	BOOL status = 1;
@@ -1322,7 +1322,7 @@ void CLightingControlDlg::OnBnClickedCheckB4()
 	UpdateCheckValue(LightBit, status, 1);
 }
 
-void CLightingControlDlg::OnBnClickedCheckB5()
+void CLEDControlDlg::OnBnClickedCheckB5()
 {
 	BYTE LightBit = 0b00100000;
 	BOOL status = 1;
@@ -1335,7 +1335,7 @@ void CLightingControlDlg::OnBnClickedCheckB5()
 	UpdateCheckValue(LightBit, status, 1);
 }
 
-void CLightingControlDlg::OnBnClickedCheckB6()
+void CLEDControlDlg::OnBnClickedCheckB6()
 {
 	BYTE LightBit = 0b01000000;
 	BOOL status = 1;
@@ -1348,7 +1348,7 @@ void CLightingControlDlg::OnBnClickedCheckB6()
 	UpdateCheckValue(LightBit, status, 1);
 }
 
-void CLightingControlDlg::OnBnClickedCheckB7()
+void CLEDControlDlg::OnBnClickedCheckB7()
 {
 	BYTE LightBit = 0b10000000;
 	BOOL status = 1;
@@ -1361,7 +1361,7 @@ void CLightingControlDlg::OnBnClickedCheckB7()
 	UpdateCheckValue(LightBit, status, 1);
 }
 
-void CLightingControlDlg::OnBnClickedCheckALL_B()
+void CLEDControlDlg::OnBnClickedCheckALL_B()
 {
 	BYTE LightBit = 0b11101111;
 	BOOL status = 1;
@@ -1374,7 +1374,7 @@ void CLightingControlDlg::OnBnClickedCheckALL_B()
 	UpdateCheckValue(LightBit, status, 1);
 }
 
-void CLightingControlDlg::OnTimer(UINT_PTR nIDEvent)
+void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	switch (nIDEvent)
@@ -1504,7 +1504,7 @@ void CLightingControlDlg::OnTimer(UINT_PTR nIDEvent)
 				// （2）-①更新电压，开始下一次内循环触发
 				m_tempVoltA = vec_VoltA[VoltID]; // 界面当前电压值更新
 				m_tempVoltB = vec_VoltB[VoltID]; // 界面当前电压值更新
-				sendLightingVolt();
+				sendLEDVolt();
 				BackSend(Order::WriteData_DAC, 5);
 				BackSend(Order::CommonVolt_On, 5, config_PowerStableTime); // 这里需要消耗一定时长，不能在定时器内。
 				info = _T("The power of LED is turn on!");
@@ -1541,7 +1541,7 @@ void CLightingControlDlg::OnTimer(UINT_PTR nIDEvent)
 	CDialogEx::OnTimer(nIDEvent);
 }
 
-void CLightingControlDlg::OnClose()
+void CLEDControlDlg::OnClose()
 {
 	KillTimer(3);
 
@@ -1571,7 +1571,7 @@ void CLightingControlDlg::OnClose()
 	CDialogEx::OnClose();
 }
 
-void CLightingControlDlg::PrintLog(CString info, BOOL isShow)
+void CLEDControlDlg::PrintLog(CString info, BOOL isShow)
 {
 	// 添加日志到文件
 	CLog::SetPrefix(_T("LED"));
@@ -1588,7 +1588,7 @@ void CLightingControlDlg::PrintLog(CString info, BOOL isShow)
 	m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); // 每次刷新后都显示最底部
 }
 
-void CLightingControlDlg::OnEnKillfocusVoltA()
+void CLEDControlDlg::OnEnKillfocusVoltA()
 {
 	UpdateData(TRUE);
 
@@ -1611,7 +1611,7 @@ void CLightingControlDlg::OnEnKillfocusVoltA()
 	}
 }
 
-void CLightingControlDlg::OnEnKillfocusVoltB()
+void CLEDControlDlg::OnEnKillfocusVoltB()
 {
 	UpdateData(TRUE);
 
@@ -1634,7 +1634,7 @@ void CLightingControlDlg::OnEnKillfocusVoltB()
 	}
 }
 
-void CLightingControlDlg::OnEnKillfocusLightWidth()
+void CLEDControlDlg::OnEnKillfocusLightWidth()
 {
 	UpdateData(TRUE);
 	int minValue = 1;
@@ -1658,7 +1658,7 @@ void CLightingControlDlg::OnEnKillfocusLightWidth()
 	}
 }
 
-void CLightingControlDlg::OnEnKillfocusLightDelay()
+void CLEDControlDlg::OnEnKillfocusLightDelay()
 {
 	UpdateData(TRUE);
 	int minValue = 1;
@@ -1682,7 +1682,7 @@ void CLightingControlDlg::OnEnKillfocusLightDelay()
 	}
 }
 
-void CLightingControlDlg::OnEnKillfocusCalibrationTime()
+void CLEDControlDlg::OnEnKillfocusCalibrationTime()
 {
 	UpdateData(TRUE);
 	int minValue = 1;
@@ -1706,7 +1706,7 @@ void CLightingControlDlg::OnEnKillfocusCalibrationTime()
 	}
 }
 
-void CLightingControlDlg::ResetFPGA()
+void CLEDControlDlg::ResetFPGA()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	BackSend(Order::TriggerOff, 5);		// 停止触发
@@ -1715,7 +1715,7 @@ void CLightingControlDlg::ResetFPGA()
 	BackSend(Order::Reset, 5);			// 复位
 }
 
-void CLightingControlDlg::ResetSystem()
+void CLEDControlDlg::ResetSystem()
 {
 	if (SingleTriggerStatus)
 		KillTimer(1);
@@ -1746,7 +1746,7 @@ void CLightingControlDlg::ResetSystem()
 	PrintLog(info);
 }
 
-void CLightingControlDlg::OnBnClickedClearLog()
+void CLEDControlDlg::OnBnClickedClearLog()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	m_strLog = _T("");

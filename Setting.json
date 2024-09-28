@@ -14,7 +14,7 @@
 	"MaxVolt" : 3040,
 	"MinVolt" : 2675,
 	"PowerStableTime" : 10,
-	"SoftwareTitle" : "Lighting Control",
+	"SoftwareTitle" : "LED Control",
 	"StopBits" : 0,
 	"TriggerHLPoints" : 11,
 	"tempVoltA" : 3000,
