@@ -21,7 +21,7 @@ public:
 	static BYTE RegisterClockRate[];
 
 	//配置硬件触发高电平点数,单位×10ns，默认值10ns
-	static BYTE TriggerPointsSet[];
+	static BYTE TriggerHLPointsSet[];
 
 	//配置移位寄存器数据,控制各个LED是否发光
 	static BYTE LightingSwitch[];

@@ -32,8 +32,10 @@ public:
 	void UpdateCheckValue(const BYTE stateBit, BOOL status, int LightID); 
 	//更新LED勾选状态
 	void UpdateLEDCheck();
-	//读取界面的各个控件的上一次关闭界面时的参数
+	//读取界面的各个控件的上一次设置参数
 	void InitSettingByHistoryInput();
+	//读取配置文件中的基本配置参数
+	void InitConfigSetting();
 	//读取串口
 	DWORD ReadComm();
 	//读取预设电压json文件的数据
@@ -59,9 +61,6 @@ public:
 	//配置LED发光延迟时间
 	void sendLEDDelay();
 
-	//配置硬件触发高电平点数（取值范围：1~255，暂时将该配置放在setting.json文件中）
-	void sendTriggerHLPoints();
-
 	//配置移位寄存器数据,设置LED灯是否开启
 	void sendShiftRegisterData();
 
@@ -72,17 +71,27 @@ public:
 	void EnableControl(BOOL flag);
 
 	CStatusBar m_statusBar; // 状态栏
-	int nBaud; //波特率
-	int nData; //数据位
-	int nStop; //停止位
-	int nCal;  //校验位
+	int config_nBaud; //波特率
+	int config_nData; //数据位
+	int config_nStop; //停止位
+	int config_nCal;  //校验位
+	int config_minV; //LED灯的电压下限值，从配置参数中获取
+	int config_maxV; //LED灯的电压上限值，从配置参数中获取
+	int config_PowerStableTime; //外设电源开启时，需要延时一定时间，使其稳定，这个参数放在setting.json中可调,单位ms
+	int config_triggerHLPoints; //硬件触发高电平点数
+	// 需要对电压到DAC数值的刻度曲线
+	// DAC = P1*Volt + P2
+	double config_p1_A; 
+	double config_p2_A;
+	double config_p1_B;
+	double config_p2_B;
+
 	BYTE m_LightSwitchA; //灯光开关控制A,1个字节，八个bit，00000000。从右往左数第五位是无效位。
 	BYTE m_LightSwitchB; //灯光开关控制B，1个字节，八个bit，00000000。从右往左数第五位是无效位。
 	int timer; // 计时器，满测量时长后则发送停止测量
 	CString VoltFile; //存放预设电压的json文件名及其路径
 	vector<int> vec_VoltA; //A组预设电压值，单位mV
 	vector<int> vec_VoltB; //B组预设电压值，单位mV
-	int DelayTimeofVoltOn; //外设电源开启时，需要延时一定时间，使其稳定，这个参数放在setting.json中可调,单位ms
 
 // 对话框数据
 #ifdef AFX_DESIGN_TIME
