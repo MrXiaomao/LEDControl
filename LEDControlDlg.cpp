@@ -793,7 +793,6 @@ void CLEDControlDlg::OnComcontrol()
 			m_comlist.EnableWindow(false);						// 设置串口号下拉框不可用
 			GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(true);	// 设置单次触发按钮可用
 			GetDlgItem(IDC_LOOP_TRIGGER)->EnableWindow(true);	// 设置循环触发按钮可用
-			GetDlgItem(IDC_SERIALPORT_ID)->EnableWindow(false); // 连接后串口号下拉框禁止使用
 			GetDlgItem(IDC_RESET_KERNAL)->EnableWindow(true); // 设置重置按钮可用
 
 			// 日志打印
@@ -819,12 +818,10 @@ void CLEDControlDlg::OnComcontrol()
 		m_comcontrol.SetText(_T("Connect"));
 		m_comcontrol.SetForeColor(RGB(255, 0, 0));
 		m_NetStatusLED.RefreshWindow(FALSE, _T("OFF")); // 设置指示灯
-		m_comlist.EnableWindow(false);					// 设置串口号下拉框不可用
+		m_comlist.EnableWindow(true);					// 设置串口号下拉框可用
 
 		GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(false);	// 设置单次触发按钮不可用
 		GetDlgItem(IDC_LOOP_TRIGGER)->EnableWindow(false);	// 设置循环触发按钮不可用
-		GetDlgItem(IDC_SERIALPORT_ID)->EnableWindow(false); // 连接后串口号下拉框恢复使用
-		// GetDlgItem(IDC_VOLT_LOOP_FILE)->EnableWindow(false); //设置选择电压文件按钮不可用
 		GetDlgItem(IDC_RESET_KERNAL)->EnableWindow(false); // 设置重置按钮不可用
 
 		return;
@@ -894,6 +891,7 @@ void CLEDControlDlg::OnBnClickedOneTrigger()
 		CString info = _T("\r\nSingleTrigger was forcibly stopped by the user!");
 		PrintLog(info);
 		SingleTriggerStatus = FALSE;
+		timer = 0;
 	}
 	// 恢复使用
 	GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(true);
@@ -975,6 +973,7 @@ void CLEDControlDlg::OnBnClickedLoopTrigger()
 		PrintLog(info);
 
 		LoopTriggerStatus = FALSE;
+		timer = 0;
 	}
 	// 恢复本按键使用
 	GetDlgItem(IDC_LOOP_TRIGGER)->EnableWindow(true);

@@ -1,6 +1,6 @@
 {
 	"BaudRate" : 115200,
-	"CalibrationTime" : 255,
+	"CalibrationTime" : 5,
 	"CalibrationVoltA_P1" : -10.869999999999999,
 	"CalibrationVoltA_P2" : 33150.0,
 	"CalibrationVoltB_P1" : -10.92,
