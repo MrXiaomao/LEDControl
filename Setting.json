@@ -10,7 +10,7 @@
 	"LightDelay" : 1,
 	"LightSwitchA" : 7,
 	"LightSwitchB" : 8,
-	"LightWidth" : 10,
+	"LEDWidth" : 10,
 	"MaxVolt" : 3040,
 	"MinVolt" : 2675,
 	"PowerStableTime" : 10,

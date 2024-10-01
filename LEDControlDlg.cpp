@@ -58,6 +58,7 @@ CLEDControlDlg::CLEDControlDlg(CWnd* pParent /*=nullptr*/)
 	  pReceiveThread(nullptr),
 	  config_nBaud(115200), config_nData(8), config_nStop(1), config_nCal(0),
 	  config_minV(2000), config_maxV(3500),
+	  config_minLEDWidth(1),config_maxLEDWidth(255),
 	  config_PowerStableTime(10),
 	  config_triggerHLPoints(11),
 	  config_p1_A(-10.87), config_p2_A(33150.0),
@@ -66,7 +67,7 @@ CLEDControlDlg::CLEDControlDlg(CWnd* pParent /*=nullptr*/)
 	  m_strLog(_T("")),
 	  m_CalibrationTime(10),
 	  m_LightDelay(9999),
-	  m_LightWidth(10),
+	  m_tempLEDWidth(10),
 	  m_tempVoltA(2700),
 	  m_tempVoltB(2700),
 	  timer(0),
@@ -75,6 +76,7 @@ CLEDControlDlg::CLEDControlDlg(CWnd* pParent /*=nullptr*/)
 	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
 	vec_VoltA.resize(0);
 	vec_VoltB.resize(0);
+	vec_TimeWidth.resize(0);
 }
 
 void CLEDControlDlg::DoDataExchange(CDataExchange* pDX)
@@ -87,7 +89,7 @@ void CLEDControlDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT_LOG, m_strLog);
 	DDX_Text(pDX, IDC_CALIBRATION_TIME, m_CalibrationTime);
 	DDX_Text(pDX, IDC_LED_DELAY, m_LightDelay);
-	DDX_Text(pDX, IDC_LED_WIDTH, m_LightWidth);
+	DDX_Text(pDX, IDC_LED_WIDTH, m_tempLEDWidth);
 	DDX_Text(pDX, IDC_VOLTA, m_tempVoltA);
 	DDX_Text(pDX, IDC_VOLTB, m_tempVoltB);
 	DDX_Control(pDX, IDC_EDIT_LOG, m_LogEdit);
@@ -381,7 +383,45 @@ void CLEDControlDlg::InitConfigSetting()
 			info.Format(_T("Warning：Cannot find key words 'MaxVolt' in 'Setting.json' file, MinVolt is set to %d！"), config_maxV);
 			PrintLog(info);
 		}
-		
+
+		if (jsonSetting.isMember("MinLEDWidth"))
+		{
+			config_minLEDWidth = jsonSetting["MinLEDWidth"].asInt();
+			if (config_minLEDWidth < 1)
+			{
+				info.Format(_T("Warning: the 'MinLEDWidth':%d is less than 1. The 'MinLEDWidth' is reset to 1"),
+							config_minLEDWidth);
+				PrintLog(info);
+				config_minLEDWidth = 1;
+				jsonSetting["MinLEDWidth"] = config_minLEDWidth;
+			}
+		}
+		else
+		{
+			jsonSetting["MinLEDWidth"] = config_minLEDWidth;
+			info.Format(_T("Warning: cannot find key words 'MinLEDWidth' in 'Setting.json' file, The 'MinLEDWidth' is set to 1"), config_minLEDWidth);
+			PrintLog(info);
+		}
+
+		if (jsonSetting.isMember("MaxLEDWidth"))
+		{
+			config_maxLEDWidth = jsonSetting["MaxLEDWidth"].asInt();
+			if (config_maxLEDWidth > 255)
+			{
+				info.Format(_T("Warning: the 'MaxLEDWidth':%d is more than 255. The 'MaxLEDWidth' is reset to 255"),
+							config_maxLEDWidth);
+				PrintLog(info);
+				config_maxLEDWidth = 1;
+				jsonSetting["MaxLEDWidth"] = config_maxLEDWidth;
+			}
+		}
+		else
+		{
+			jsonSetting["MaxLEDWidth"] = config_maxLEDWidth;
+			info.Format(_T("Warning: cannot find key words 'MaxLEDWidth' in 'Setting.json' file, The 'MaxLEDWidth' is set to 255"), config_maxLEDWidth);
+			PrintLog(info);
+		}
+
 		// 更新界面电压控件输入范围
 		CString str_Volt;
 		str_Volt.Format(_T("range:%d~%d"), config_minV, config_maxV);
@@ -515,14 +555,14 @@ void CLEDControlDlg::InitSettingByHistoryInput()
 		{
 			jsonSetting["LightDelay"] = m_LightDelay;
 		}
-		// m_LightWidth
-		if (jsonSetting.isMember("LightWidth"))
+		// m_tempLEDWidth
+		if (jsonSetting.isMember("LEDWidth"))
 		{
-			m_LightWidth = jsonSetting["LightWidth"].asInt();
+			m_tempLEDWidth = jsonSetting["LEDWidth"].asInt();
 		}
 		else
 		{
-			jsonSetting["LightWidth"] = m_LightWidth;
+			jsonSetting["LEDWidth"] = m_tempLEDWidth;
 		}
 		// LED开关状态
 		if (jsonSetting.isMember("LightSwitchA"))
@@ -556,6 +596,7 @@ BOOL CLEDControlDlg::ReadVoltFile(const CString file)
 {
 	vec_VoltA.resize(0);
 	vec_VoltB.resize(0);
+	vec_TimeWidth.resize(0);
 	// 提醒用户选择预设电压json文件
 	if (file == _T(""))
 	{
@@ -566,6 +607,7 @@ BOOL CLEDControlDlg::ReadVoltFile(const CString file)
 
 	int NumVoltA = 0;
 	int NumVoltB = 0;
+	int NumLEDWidth = 0;
 	// 提取数据并做类型、数值是否在范围内的检查
 	Json::Value jsonVoltSetting = ReadSetting(file);
 	if (!jsonVoltSetting.isNull())
@@ -650,12 +692,54 @@ BOOL CLEDControlDlg::ReadVoltFile(const CString file)
 			PrintLog(_T("ERROR: Cannot find 'voltB'. See it in ") + file);
 			return FALSE;
 		}
+
+		if (jsonVoltSetting.isMember("LEDWidth"))
+		{
+			NumLEDWidth = jsonVoltSetting["LEDWidth"].size();
+
+			if (NumLEDWidth > 0)
+			{
+				for (int i = 0; i < NumLEDWidth; i++)
+				{
+					if (jsonVoltSetting["LEDWidth"][i].isInt())
+					{
+						int width = jsonVoltSetting["LEDWidth"][i].asInt();
+						if (width < config_minLEDWidth || width > config_maxLEDWidth)
+						{
+							CString info;
+							info.Format(_T("ERROR: %d of 'LEDWidth' is over range:%d~%d,In file: "), width, config_minLEDWidth, config_minLEDWidth);
+							info += file;
+							PrintLog(info);
+							vec_TimeWidth.resize(0);
+							return FALSE;
+						}
+						vec_TimeWidth.push_back(width);
+					}
+					else
+					{
+						PrintLog(_T("ERROR: The input of 'LEDWidth' is wrong; It must be set to an integer. In file: ") + file);
+						return FALSE;
+					}
+				}
+			}
+			else
+			{
+				PrintLog(_T("ERROR: The input size of 'voltB' is zero. Please check the file in ") + file);
+				return FALSE;
+			}
+		}
+		else
+		{
+			PrintLog(_T("ERROR: Cannot find 'voltB'. See it in ") + file);
+			return FALSE;
+		}
 	}
 
-	if (NumVoltA > 0 && (NumVoltA == NumVoltB))
+	if (NumVoltA > 0 && (NumVoltA == NumVoltB) && (NumVoltA == NumLEDWidth))
 	{
 		m_tempVoltA = vec_VoltA[0]; // 界面当前电压值更新
 		m_tempVoltB = vec_VoltB[0]; // 界面当前电压值更新
+		m_tempLEDWidth = vec_TimeWidth[0]; //界面当前时间宽度
 	}
 	else
 	{
@@ -1061,7 +1145,7 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 
 void CLEDControlDlg::sendLEDwidth()
 {
-	Order::LEDWidth[3] = m_LightWidth;
+	Order::LEDWidth[3] = m_tempLEDWidth;
 	BackSend(Order::LEDWidth, 5);
 }
 
@@ -1503,6 +1587,7 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 				// （2）-①更新电压，开始下一次内循环触发
 				m_tempVoltA = vec_VoltA[VoltID]; // 界面当前电压值更新
 				m_tempVoltB = vec_VoltB[VoltID]; // 界面当前电压值更新
+				m_tempLEDWidth = vec_TimeWidth[VoltID]; //界面当前时间宽度更新
 				sendLEDVolt();
 				BackSend(Order::WriteData_DAC, 5);
 				BackSend(Order::CommonVolt_On, 5, config_PowerStableTime); // 这里需要消耗一定时长，不能在定时器内。
@@ -1526,6 +1611,7 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 				{
 					jsonSetting["tempVoltA"] = m_tempVoltA;
 					jsonSetting["tempVoltB"] = m_tempVoltB;
+					jsonSetting["LEDWidth"] = m_tempLEDWidth;
 					WriteSetting(_T("Setting.json"), jsonSetting);
 				}
 			}
@@ -1560,7 +1646,7 @@ void CLEDControlDlg::OnClose()
 		jsonSetting["tempVoltB"] = m_tempVoltB;
 		jsonSetting["CalibrationTime"] = m_CalibrationTime;
 		jsonSetting["LightDelay"] = m_LightDelay;
-		jsonSetting["LightWidth"] = m_LightWidth;
+		jsonSetting["LEDWidth"] = m_tempLEDWidth;
 		WriteSetting(_T("Setting.json"), jsonSetting);
 	}
 
@@ -1638,21 +1724,21 @@ void CLEDControlDlg::OnEnKillfocusLightWidth()
 	UpdateData(TRUE);
 	int minValue = 1;
 	int maxValue = 255;
-	if ((m_LightWidth < minValue) || (m_LightWidth > maxValue))
+	if ((m_tempLEDWidth < minValue) || (m_tempLEDWidth > maxValue))
 	{
 		// 注意这里要先刷新值，再弹出框提醒用户，因为编辑框响应“光标移除”与“enter"键两种信号，后刷新值会导致重复触发本函数
-		if (m_LightWidth > maxValue)
+		if (m_tempLEDWidth > maxValue)
 		{
-			m_LightWidth = maxValue;
+			m_tempLEDWidth = maxValue;
 		}
 		else
 		{
-			m_LightWidth = minValue;
+			m_tempLEDWidth = minValue;
 		}
 		UpdateData(FALSE);
 
 		CString message;
-		message.Format(_T("The range of LightWidth is %d~%dns\n"), minValue * 10, maxValue * 10);
+		message.Format(_T("The range of LEDWidth is %d~%dns\n"), minValue * 10, maxValue * 10);
 		MessageBox(message);
 	}
 }

@@ -77,6 +77,8 @@ public:
 	int config_nCal;  //校验位
 	int config_minV; //LED灯的电压下限值，从配置参数中获取
 	int config_maxV; //LED灯的电压上限值，从配置参数中获取
+	int config_minLEDWidth; //LED灯的发光宽度最小值,单位为x10ns
+	int config_maxLEDWidth; //LED灯的发光宽度最大值,单位为x10ns
 	int config_PowerStableTime; //外设电源开启时，需要延时一定时间，使其稳定，这个参数放在setting.json中可调,单位ms
 	int config_triggerHLPoints; //硬件触发高电平点数
 	// 需要对电压到DAC数值的刻度曲线
@@ -92,6 +94,7 @@ public:
 	CString VoltFile; //存放预设电压的json文件名及其路径
 	vector<int> vec_VoltA; //A组预设电压值，单位mV
 	vector<int> vec_VoltB; //B组预设电压值，单位mV
+	vector<int> vec_TimeWidth; //时间宽度,单位为x10ns
 
 // 对话框数据
 #ifdef AFX_DESIGN_TIME
@@ -128,7 +131,7 @@ public:
 	CEdit m_LogEdit;//日志文本控件
 	int m_CalibrationTime; //标定时长，单位s
 	int m_LightDelay; //LED发光延迟时间,单位us
-	int m_LightWidth; //LED发光宽度,单位为x10ns
+	int m_tempLEDWidth; //LED发光宽度,单位为x10ns
 	int m_tempVoltA;  //A组LED当前电压，单位mV
 	int m_tempVoltB;  //B组LED当前电压，单位mV
 	
