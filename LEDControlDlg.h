@@ -29,7 +29,7 @@ public:
 	void PrintLog(CString info, BOOL isShow = TRUE);
 
 	//更新勾选框对应的数值
-	void UpdateCheckValue(const BYTE stateBit, BOOL status, int LightID); 
+	void UpdateCheckValue(const BYTE stateBit, BOOL status, int LEDID); 
 	//更新LED勾选状态
 	void UpdateLEDCheck();
 	//读取界面的各个控件的上一次设置参数
@@ -38,8 +38,8 @@ public:
 	void InitConfigSetting();
 	//读取串口
 	DWORD ReadComm();
-	//读取预设电压json文件的数据
-	BOOL ReadVoltFile(const CString file);
+	//读取预设电压、发光宽度的json文件数据
+	BOOL ReadLoopFile(const CString file);
 
 	/*阻塞式发送，串口发送数据到FPGA，直到检测到指令反馈成功或者等待超时才退出。
 	* msg 发送信息
@@ -88,8 +88,14 @@ public:
 	double config_p1_B;
 	double config_p2_B;
 
-	BYTE m_LightSwitchA; //灯光开关控制A,1个字节，八个bit，00000000。从右往左数第五位是无效位。
-	BYTE m_LightSwitchB; //灯光开关控制B，1个字节，八个bit，00000000。从右往左数第五位是无效位。
+	BOOL TCPfeedback; // 发送数据后，网口指令反馈状态.无正确反馈则禁止发送下一条指令。
+	BYTE* LastSendMsg; // 上一次发送的指令
+	BYTE* RecvMsg; // 网口接收数据
+	int recievedFBLength; //已接收网口数据长度，取前N个字节
+	int FeedbackLen; //指令反馈字节长度
+
+	BYTE m_LEDSwitchA; //灯光开关控制A,1个字节，八个bit，00000000。从右往左数第五位是无效位。
+	BYTE m_LEDSwitchB; //灯光开关控制B，1个字节，八个bit，00000000。从右往左数第五位是无效位。
 	int timer; // 计时器，满测量时长后则发送停止测量
 	CString VoltFile; //存放预设电压的json文件名及其路径
 	vector<int> vec_VoltA; //A组预设电压值，单位mV
@@ -130,7 +136,7 @@ public:
 	LEDButton m_NetStatusLED;
 	CEdit m_LogEdit;//日志文本控件
 	int m_CalibrationTime; //标定时长，单位s
-	int m_LightDelay; //LED发光延迟时间,单位us
+	int m_LEDDelay; //LED发光延迟时间,单位us
 	int m_tempLEDWidth; //LED发光宽度,单位为x10ns
 	int m_tempVoltA;  //A组LED当前电压，单位mV
 	int m_tempVoltB;  //B组LED当前电压，单位mV
@@ -158,8 +164,8 @@ public:
 	//控件失去焦点，进行数值判断
 	afx_msg void OnEnKillfocusVoltA();
 	afx_msg void OnEnKillfocusVoltB();
-	afx_msg void OnEnKillfocusLightWidth(); 
-	afx_msg void OnEnKillfocusLightDelay();
+	afx_msg void OnEnKillfocusLEDWidth(); 
+	afx_msg void OnEnKillfocusLEDDelay();
 	afx_msg void OnEnKillfocusCalibrationTime();
 	
 	//结束测量状态并重置FPGA

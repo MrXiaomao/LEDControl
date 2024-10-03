@@ -129,7 +129,7 @@ void CloseComm()
 //==========串口监听线程函数====================== 
 UINT ThreadFunc(LPVOID pParam) 
 { 
-	// CCommassistDlg* pdlg = (CCommassistDlg*)pParam; //定义指针指向主对话框 
+	CLEDControlDlg* pdlg = (CLEDControlDlg*)pParam; //定义指针指向主对话框 
 	COMSTAT ComStat; 
 	DWORD dwErrorFlags; 
 	while(ComIsOK) 
@@ -140,7 +140,10 @@ UINT ThreadFunc(LPVOID pParam)
 		if(!dwBytesRead) 
 		{ 
 			Sleep(10);//continue;//使用continue时，打开串口后CPU占用率非常高 
-		} else ::SendMessage(::AfxGetMainWnd()->m_hWnd,WM_READCOMM,1,0); //发送消息,已读到 
+		} else {
+			// ::SendMessage(::AfxGetMainWnd()->m_hWnd,WM_READCOMM,1,0); //发送消息,已读到 ，采用排队消息处理方式
+			pdlg->ReadComm(); //多线程处理，不占用界面线程资源
+		}
 	} 
 	return 0; 
 }

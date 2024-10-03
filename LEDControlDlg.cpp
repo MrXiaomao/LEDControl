@@ -63,10 +63,15 @@ CLEDControlDlg::CLEDControlDlg(CWnd* pParent /*=nullptr*/)
 	  config_triggerHLPoints(11),
 	  config_p1_A(-10.87), config_p2_A(33150.0),
 	  config_p1_B(-10.92), config_p2_B(33240.0),
-	  m_LightSwitchA(0x00), m_LightSwitchB(0x00),
+    TCPfeedback(FALSE),
+    LastSendMsg(NULL),
+    RecvMsg(NULL),
+    recievedFBLength(0),
+    FeedbackLen(5),
+	  m_LEDSwitchA(0x00), m_LEDSwitchB(0x00),
 	  m_strLog(_T("")),
 	  m_CalibrationTime(10),
-	  m_LightDelay(9999),
+	  m_LEDDelay(9999),
 	  m_tempLEDWidth(10),
 	  m_tempVoltA(2700),
 	  m_tempVoltB(2700),
@@ -88,7 +93,7 @@ void CLEDControlDlg::DoDataExchange(CDataExchange* pDX)
 
 	DDX_Text(pDX, IDC_EDIT_LOG, m_strLog);
 	DDX_Text(pDX, IDC_CALIBRATION_TIME, m_CalibrationTime);
-	DDX_Text(pDX, IDC_LED_DELAY, m_LightDelay);
+	DDX_Text(pDX, IDC_LED_DELAY, m_LEDDelay);
 	DDX_Text(pDX, IDC_LED_WIDTH, m_tempLEDWidth);
 	DDX_Text(pDX, IDC_VOLTA, m_tempVoltA);
 	DDX_Text(pDX, IDC_VOLTB, m_tempVoltB);
@@ -123,8 +128,8 @@ ON_BN_CLICKED(IDC_VOLT_LOOP_FILE, &CLEDControlDlg::ChoseVoltLoopFile)
 ON_BN_CLICKED(IDC_LOOP_TRIGGER, &CLEDControlDlg::OnBnClickedLoopTrigger)
 ON_EN_KILLFOCUS(IDC_VOLTA, &CLEDControlDlg::OnEnKillfocusVoltA)
 ON_EN_KILLFOCUS(IDC_VOLTB, &CLEDControlDlg::OnEnKillfocusVoltB)
-ON_EN_KILLFOCUS(IDC_LED_WIDTH, &CLEDControlDlg::OnEnKillfocusLightWidth)
-ON_EN_KILLFOCUS(IDC_LED_DELAY, &CLEDControlDlg::OnEnKillfocusLightDelay)
+ON_EN_KILLFOCUS(IDC_LED_WIDTH, &CLEDControlDlg::OnEnKillfocusLEDWidth)
+ON_EN_KILLFOCUS(IDC_LED_DELAY, &CLEDControlDlg::OnEnKillfocusLEDDelay)
 ON_EN_KILLFOCUS(IDC_CALIBRATION_TIME, &CLEDControlDlg::OnEnKillfocusCalibrationTime)
 ON_BN_CLICKED(IDC_RESET_KERNAL, &CLEDControlDlg::ResetSystem)
 ON_BN_CLICKED(IDC_CLEAR_LOG, &CLEDControlDlg::OnBnClickedClearLog)
@@ -546,43 +551,43 @@ void CLEDControlDlg::InitSettingByHistoryInput()
 		{
 			jsonSetting["CalibrationTime"] = m_CalibrationTime;
 		}
-		// m_LightDelay
-		if (jsonSetting.isMember("LightDelay"))
+		// m_LEDDelay
+		if (jsonSetting.isMember("LEDDelay"))
 		{
-			m_LightDelay = jsonSetting["LightDelay"].asInt();
+			m_LEDDelay = jsonSetting["LEDDelay"].asInt();
 		}
 		else
 		{
-			jsonSetting["LightDelay"] = m_LightDelay;
+			jsonSetting["LEDDelay"] = m_LEDDelay;
 		}
 		// m_tempLEDWidth
-		if (jsonSetting.isMember("LEDWidth"))
+		if (jsonSetting.isMember("tempLEDWidth"))
 		{
-			m_tempLEDWidth = jsonSetting["LEDWidth"].asInt();
+			m_tempLEDWidth = jsonSetting["tempLEDWidth"].asInt();
 		}
 		else
 		{
-			jsonSetting["LEDWidth"] = m_tempLEDWidth;
+			jsonSetting["tempLEDWidth"] = m_tempLEDWidth;
 		}
 		// LED开关状态
-		if (jsonSetting.isMember("LightSwitchA"))
+		if (jsonSetting.isMember("LEDSwitchA"))
 		{
-			int valueA = jsonSetting["LightSwitchA"].asInt();
-			m_LightSwitchA = (BYTE)(valueA & 0xFF);
+			int valueA = jsonSetting["LEDSwitchA"].asInt();
+			m_LEDSwitchA = (BYTE)(valueA & 0xFF);
 		}
 		else
 		{
-			jsonSetting["LightSwitchA"] = m_LightSwitchA;
+			jsonSetting["LEDSwitchA"] = m_LEDSwitchA;
 		}
 		// LED开关状态
-		if (jsonSetting.isMember("LightSwitchB"))
+		if (jsonSetting.isMember("LEDSwitchB"))
 		{
-			int valueB = jsonSetting["LightSwitchB"].asInt();
-			m_LightSwitchB = (BYTE)(valueB & 0xFF);
+			int valueB = jsonSetting["LEDSwitchB"].asInt();
+			m_LEDSwitchB = (BYTE)(valueB & 0xFF);
 		}
 		else
 		{
-			jsonSetting["LightSwitchB"] = m_LightSwitchB;
+			jsonSetting["LEDSwitchB"] = m_LEDSwitchB;
 		}
 	}
 	WriteSetting(_T("Setting.json"), jsonSetting);
@@ -592,7 +597,7 @@ void CLEDControlDlg::InitSettingByHistoryInput()
 	UpdateLEDCheck();
 }
 
-BOOL CLEDControlDlg::ReadVoltFile(const CString file)
+BOOL CLEDControlDlg::ReadLoopFile(const CString file)
 {
 	vec_VoltA.resize(0);
 	vec_VoltB.resize(0);
@@ -724,13 +729,13 @@ BOOL CLEDControlDlg::ReadVoltFile(const CString file)
 			}
 			else
 			{
-				PrintLog(_T("ERROR: The input size of 'voltB' is zero. Please check the file in ") + file);
+				PrintLog(_T("ERROR: The input size of 'LEDWidth' is zero. Please check the file in ") + file);
 				return FALSE;
 			}
 		}
 		else
 		{
-			PrintLog(_T("ERROR: Cannot find 'voltB'. See it in ") + file);
+			PrintLog(_T("ERROR: Cannot find 'LEDWidth'. See it in ") + file);
 			return FALSE;
 		}
 	}
@@ -743,7 +748,10 @@ BOOL CLEDControlDlg::ReadVoltFile(const CString file)
 	}
 	else
 	{
-		PrintLog(_T("ERROR: Cannot find 'voltB'. See it in ") + file);
+		CString info;
+		info.Format(_T("ERROR: the size of  'voltA' is %d,the size of 'VoltB' is %d,the size \
+			of 'LEDWidth' is %d.They are not equal.See it in"), NumVoltA, NumVoltB, NumLEDWidth);
+		PrintLog(info + file);
 		return FALSE;
 	}
 
@@ -775,7 +783,7 @@ LRESULT CLEDControlDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 DWORD CLEDControlDlg::ReadComm()
 {
-	CString strTemp;
+	// CString strTemp;
 	OVERLAPPED m_osRead;
 	memset(&m_osRead, 0, sizeof(OVERLAPPED));
 	m_osRead.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -795,10 +803,26 @@ DWORD CLEDControlDlg::ReadComm()
 		return 0;
 	}
 	lpInBuffer[dwBytesRead] = NULL;
-	strTemp = lpInBuffer;
-	// DataReceive += (BYTE)lpInBuffer;
+	int nLength = static_cast<int>(dwBytesRead); //本次接收数据长度
+	// strTemp = lpInBuffer;
+	
+	int receLen = 0; //当前已经接收的总反馈指令长度
+	receLen = recievedFBLength + nLength;
+	BYTE* tempChar = (BYTE*)malloc(receLen);
+	//先取旧数据
+	if (RecvMsg != NULL) {
+		for (int i = 0; i < recievedFBLength; i++) {
+			tempChar[i] = *(RecvMsg + i);
+		}
+	}
 
-	// ShowStatus();
+	// 拼接新数据
+	for (int i = 0; i < nLength; i++) {
+		tempChar[recievedFBLength + i] = lpInBuffer[i];
+	}
+	RecvMsg = tempChar;
+	recievedFBLength +=nLength;
+
 	return 1;
 }
 
@@ -861,9 +885,9 @@ void CLEDControlDlg::OnComcontrol()
 		OpenComm(config_nBaud, config_nData, nTemp, config_nCal); // 调用打开串口函数OpenComm()
 		if (ComIsOK)
 		{
+			pReceiveThread = AfxBeginThread(ThreadFunc, this, THREAD_PRIORITY_LOWEST);
 			// 先对FPGA进行复位
 			ResetFPGA();
-			pReceiveThread = AfxBeginThread(ThreadFunc, this, THREAD_PRIORITY_LOWEST);
 		}
 		// 启动接收线程
 		//  ShowStatus();
@@ -1003,7 +1027,7 @@ void CLEDControlDlg::OnBnClickedLoopTrigger()
 		GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(false);
 
 		// 先读取参数，判断电压预设文件是否正常,不正常则恢复按键使用状态
-		if (!ReadVoltFile(VoltFile))
+		if (!ReadLoopFile(VoltFile))
 		{
 			EnableControl(true);
 			GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(true);
@@ -1115,6 +1139,95 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 	memset(&m_osWrite, 0, sizeof(OVERLAPPED));
 	m_osWrite.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 	ClearCommError(hCom, &dwErrorFlags, &ComStat);
+
+	// 若超时未检测到反馈指令，则再次发送指令到FPGA。循环等待三次。
+	for (int i = 0; i < 3; i++)
+	{
+		int times = 0; //等待时长
+		CTime tm1;
+		tm1 = CTime::GetCurrentTime();
+		BOOL flag = FALSE;
+
+		// 初始化反馈相关参数
+		TCPfeedback = FALSE;
+		LastSendMsg = NULL;
+		RecvMsg = NULL;
+		recievedFBLength = 0;
+
+		// 发送指令
+		bWriteStat = WriteFile(hCom, msg, dwBytesWritten, &dwBytesWritten, &m_osWrite);
+    if (!bWriteStat)
+	  {
+      if (GetLastError() == ERROR_IO_PENDING)
+      {
+        WaitForSingleObject(m_osWrite.hEvent, maxWaitingTime);
+      }
+    }
+		LastSendMsg = msg;
+		FeedbackLen = msgLength;
+		CString info;
+		info.Format(_T("SEND HEX(%d):"), i+1);
+		info = info + Char2HexCString(LastSendMsg, msgLength);
+		PrintLog(info, isShow); 
+
+		// 阻塞式判断等待反馈指令，并进行判断是否与发送指令相同
+		do
+		{ 
+			// 判断接收指令与发送指令是否相同
+			if (recievedFBLength == msgLength)
+			{
+				CString info = _T("RECV HEX:");
+				info += Char2HexCString(RecvMsg, recievedFBLength);
+				PrintLog(info, isShow);
+				if (compareBYTE(RecvMsg, LastSendMsg, msgLength)){
+					TCPfeedback = TRUE;
+				}
+				if (!TCPfeedback) {
+					RecvMsg = NULL;
+					recievedFBLength = 0;
+				}
+			}
+
+			if (TCPfeedback)
+			{
+				CString info = _T("指令反馈校验成功:");
+				info += Char2HexCString(RecvMsg, recievedFBLength);
+				PrintLog(info, isShow);
+
+				//接收到反馈指令，重新初始化反馈相关数据
+				TCPfeedback = FALSE;
+				
+				LastSendMsg = NULL;
+				RecvMsg = NULL;
+				recievedFBLength = 0;
+
+				return TRUE;
+			}
+
+			// 计算等待时长
+			CTime tm2;
+			tm2 = CTime::GetCurrentTime();
+			CTimeSpan span;
+			span = tm2 - tm1;
+			times = span.GetSeconds();
+		} while (times < maxWaitingTime); 
+
+		info.Format(_T("等待指令反馈时间%ds,超出最大设置时长%ds,"), times, maxWaitingTime);
+		PrintLog(info, isShow);
+	}
+
+	CString info = _T("尝试3次下发指令，均无法接受到反馈指令，SEND HEX: ");
+	info = info + Char2HexCString(LastSendMsg, msgLength);
+	PrintLog(info, TRUE);
+
+	// 恢复指令反馈相关参数
+	TCPfeedback = FALSE;
+	LastSendMsg = NULL;
+	RecvMsg = NULL;
+	recievedFBLength = 0;
+
+	return FALSE;
+	/*
 	bWriteStat = WriteFile(hCom, msg, dwBytesWritten, &dwBytesWritten, &m_osWrite);
 	if (!bWriteStat)
 	{
@@ -1141,25 +1254,30 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 	// HandSendNum= dwBytesWritten;//return dwBytesWritten;
 	Sleep(sleepTime);
 	return 1;
+	*/
 }
 
 void CLEDControlDlg::sendLEDwidth()
 {
 	Order::LEDWidth[3] = m_tempLEDWidth;
 	BackSend(Order::LEDWidth, 5);
+  // 日志打印
+	CString info;
+	info.Format(_T("LEDwidth:%dns"), m_tempLEDWidth*10);
+	PrintLog(info);
 }
 
 void CLEDControlDlg::sendLEDDelay()
 {
-	Order::LEDDelay[2] = m_LightDelay / (16 * 16);
-	Order::LEDDelay[3] = m_LightDelay % (16 * 16);
+	Order::LEDDelay[2] = m_LEDDelay / (16 * 16);
+	Order::LEDDelay[3] = m_LEDDelay % (16 * 16);
 	BackSend(Order::LEDDelay, 5);
 }
 
 void CLEDControlDlg::sendShiftRegisterData()
 {
-	Order::LEDSwitch[2] = m_LightSwitchB;
-	Order::LEDSwitch[3] = m_LightSwitchA;
+	Order::LEDSwitch[2] = m_LEDSwitchB;
+	Order::LEDSwitch[3] = m_LEDSwitchA;
 	BackSend(Order::LEDSwitch, 5);
 }
 
@@ -1187,32 +1305,32 @@ void CLEDControlDlg::sendLEDVolt()
 // 刷新所有LED勾选框数值
 // state:二进制码，
 // status:勾选状态，1为勾选，0为不勾选
-// LightID，0为A组灯；1为B组灯
-void CLEDControlDlg::UpdateCheckValue(const BYTE stateBit, BOOL status, int LightID)
+// LEDID，0为A组灯；1为B组灯
+void CLEDControlDlg::UpdateCheckValue(const BYTE stateBit, BOOL status, int LEDID)
 {
 	// A灯组
-	if (LightID == 0)
+	if (LEDID == 0)
 	{
 		if (status)
 		{
-			m_LightSwitchA = m_LightSwitchA | stateBit; // 勾选做或运算
+			m_LEDSwitchA = m_LEDSwitchA | stateBit; // 勾选做或运算
 		}
 		else
 		{
-			m_LightSwitchA = m_LightSwitchA & stateBit; // 取消勾选做与运算
+			m_LEDSwitchA = m_LEDSwitchA & stateBit; // 取消勾选做与运算
 		}
 	}
 
 	// B灯组
-	if (LightID == 1)
+	if (LEDID == 1)
 	{
 		if (status)
 		{
-			m_LightSwitchB = m_LightSwitchB | stateBit;
+			m_LEDSwitchB = m_LEDSwitchB | stateBit;
 		}
 		else
 		{
-			m_LightSwitchB = m_LightSwitchB & stateBit;
+			m_LEDSwitchB = m_LEDSwitchB & stateBit;
 		}
 	}
 	UpdateLEDCheck();
@@ -1221,24 +1339,24 @@ void CLEDControlDlg::UpdateCheckValue(const BYTE stateBit, BOOL status, int Ligh
 void CLEDControlDlg::UpdateLEDCheck()
 {
 	// A组LED
-	((CButton *)GetDlgItem(IDC_CHECKA1))->SetCheck(m_LightSwitchA & 0b00000001);
-	((CButton *)GetDlgItem(IDC_CHECKA2))->SetCheck(m_LightSwitchA & 0b00000010);
-	((CButton *)GetDlgItem(IDC_CHECKA3))->SetCheck(m_LightSwitchA & 0b00000100);
-	((CButton *)GetDlgItem(IDC_CHECKA4))->SetCheck(m_LightSwitchA & 0b00001000);
-	((CButton *)GetDlgItem(IDC_CHECKA5))->SetCheck(m_LightSwitchA & 0b00100000);
-	((CButton *)GetDlgItem(IDC_CHECKA6))->SetCheck(m_LightSwitchA & 0b01000000);
-	((CButton *)GetDlgItem(IDC_CHECKA7))->SetCheck(m_LightSwitchA & 0b10000000);
-	((CButton *)GetDlgItem(IDC_CHECKALL_A))->SetCheck(m_LightSwitchA == 0b11101111);
+	((CButton *)GetDlgItem(IDC_CHECKA1))->SetCheck(m_LEDSwitchA & 0b00000001);
+	((CButton *)GetDlgItem(IDC_CHECKA2))->SetCheck(m_LEDSwitchA & 0b00000010);
+	((CButton *)GetDlgItem(IDC_CHECKA3))->SetCheck(m_LEDSwitchA & 0b00000100);
+	((CButton *)GetDlgItem(IDC_CHECKA4))->SetCheck(m_LEDSwitchA & 0b00001000);
+	((CButton *)GetDlgItem(IDC_CHECKA5))->SetCheck(m_LEDSwitchA & 0b00100000);
+	((CButton *)GetDlgItem(IDC_CHECKA6))->SetCheck(m_LEDSwitchA & 0b01000000);
+	((CButton *)GetDlgItem(IDC_CHECKA7))->SetCheck(m_LEDSwitchA & 0b10000000);
+	((CButton *)GetDlgItem(IDC_CHECKALL_A))->SetCheck(m_LEDSwitchA == 0b11101111);
 
 	// B组LED
-	((CButton *)GetDlgItem(IDC_CHECKB1))->SetCheck(m_LightSwitchB & 0b00000001);
-	((CButton *)GetDlgItem(IDC_CHECKB2))->SetCheck(m_LightSwitchB & 0b00000010);
-	((CButton *)GetDlgItem(IDC_CHECKB3))->SetCheck(m_LightSwitchB & 0b00000100);
-	((CButton *)GetDlgItem(IDC_CHECKB4))->SetCheck(m_LightSwitchB & 0b00001000);
-	((CButton *)GetDlgItem(IDC_CHECKB5))->SetCheck(m_LightSwitchB & 0b00100000);
-	((CButton *)GetDlgItem(IDC_CHECKB6))->SetCheck(m_LightSwitchB & 0b01000000);
-	((CButton *)GetDlgItem(IDC_CHECKB7))->SetCheck(m_LightSwitchB & 0b10000000);
-	((CButton *)GetDlgItem(IDC_CHECKALL_B))->SetCheck(m_LightSwitchB == 0b11101111);
+	((CButton *)GetDlgItem(IDC_CHECKB1))->SetCheck(m_LEDSwitchB & 0b00000001);
+	((CButton *)GetDlgItem(IDC_CHECKB2))->SetCheck(m_LEDSwitchB & 0b00000010);
+	((CButton *)GetDlgItem(IDC_CHECKB3))->SetCheck(m_LEDSwitchB & 0b00000100);
+	((CButton *)GetDlgItem(IDC_CHECKB4))->SetCheck(m_LEDSwitchB & 0b00001000);
+	((CButton *)GetDlgItem(IDC_CHECKB5))->SetCheck(m_LEDSwitchB & 0b00100000);
+	((CButton *)GetDlgItem(IDC_CHECKB6))->SetCheck(m_LEDSwitchB & 0b01000000);
+	((CButton *)GetDlgItem(IDC_CHECKB7))->SetCheck(m_LEDSwitchB & 0b10000000);
+	((CButton *)GetDlgItem(IDC_CHECKALL_B))->SetCheck(m_LEDSwitchB == 0b11101111);
 }
 
 void CLEDControlDlg::ChoseVoltLoopFile()
@@ -1246,215 +1364,215 @@ void CLEDControlDlg::ChoseVoltLoopFile()
 	// TODO: 在此添加控件通知处理程序代码
 	ChooseFile(VoltFile);
 	GetDlgItem(IDC_EDIT1)->SetWindowText(VoltFile);
-	ReadVoltFile(VoltFile);
+	ReadLoopFile(VoltFile);
 }
 
 void CLEDControlDlg::OnBnClickedCheckA1()
 {
-	BYTE LightBit = 0b00000001;
+	BYTE LEDBit = 0b00000001;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKA1))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 0);
+	UpdateCheckValue(LEDBit, status, 0);
 }
 
 void CLEDControlDlg::OnBnClickedCheckA2()
 {
-	BYTE LightBit = 0b00000010;
+	BYTE LEDBit = 0b00000010;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKA2))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 0);
+	UpdateCheckValue(LEDBit, status, 0);
 }
 
 void CLEDControlDlg::OnBnClickedCheckA3()
 {
-	BYTE LightBit = 0b00000100;
+	BYTE LEDBit = 0b00000100;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKA3))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 0);
+	UpdateCheckValue(LEDBit, status, 0);
 }
 
 void CLEDControlDlg::OnBnClickedCheckA4()
 {
-	BYTE LightBit = 0b00001000;
+	BYTE LEDBit = 0b00001000;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKA4))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 0);
+	UpdateCheckValue(LEDBit, status, 0);
 }
 
 void CLEDControlDlg::OnBnClickedCheckA5()
 {
-	BYTE LightBit = 0b00100000;
+	BYTE LEDBit = 0b00100000;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKA5))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 0);
+	UpdateCheckValue(LEDBit, status, 0);
 }
 
 void CLEDControlDlg::OnBnClickedCheckA6()
 {
-	BYTE LightBit = 0b01000000;
+	BYTE LEDBit = 0b01000000;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKA6))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 0);
+	UpdateCheckValue(LEDBit, status, 0);
 }
 
 void CLEDControlDlg::OnBnClickedCheckA7()
 {
-	BYTE LightBit = 0b10000000;
+	BYTE LEDBit = 0b10000000;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKA7))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 0);
+	UpdateCheckValue(LEDBit, status, 0);
 }
 
 void CLEDControlDlg::OnBnClickedCheckALL_A()
 {
-	BYTE LightBit = 0b11101111;
+	BYTE LEDBit = 0b11101111;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKALL_A))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 0);
+	UpdateCheckValue(LEDBit, status, 0);
 }
 
 void CLEDControlDlg::OnBnClickedCheckB1()
 {
-	BYTE LightBit = 0b00000001;
+	BYTE LEDBit = 0b00000001;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKB1))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 1);
+	UpdateCheckValue(LEDBit, status, 1);
 }
 
 void CLEDControlDlg::OnBnClickedCheckB2()
 {
-	BYTE LightBit = 0b00000010;
+	BYTE LEDBit = 0b00000010;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKB2))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 1);
+	UpdateCheckValue(LEDBit, status, 1);
 }
 
 void CLEDControlDlg::OnBnClickedCheckB3()
 {
-	BYTE LightBit = 0b00000100;
+	BYTE LEDBit = 0b00000100;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKB3))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 1);
+	UpdateCheckValue(LEDBit, status, 1);
 }
 
 void CLEDControlDlg::OnBnClickedCheckB4()
 {
-	BYTE LightBit = 0b00001000;
+	BYTE LEDBit = 0b00001000;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKB4))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 1);
+	UpdateCheckValue(LEDBit, status, 1);
 }
 
 void CLEDControlDlg::OnBnClickedCheckB5()
 {
-	BYTE LightBit = 0b00100000;
+	BYTE LEDBit = 0b00100000;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKB5))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 1);
+	UpdateCheckValue(LEDBit, status, 1);
 }
 
 void CLEDControlDlg::OnBnClickedCheckB6()
 {
-	BYTE LightBit = 0b01000000;
+	BYTE LEDBit = 0b01000000;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKB6))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 1);
+	UpdateCheckValue(LEDBit, status, 1);
 }
 
 void CLEDControlDlg::OnBnClickedCheckB7()
 {
-	BYTE LightBit = 0b10000000;
+	BYTE LEDBit = 0b10000000;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKB7))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 1);
+	UpdateCheckValue(LEDBit, status, 1);
 }
 
 void CLEDControlDlg::OnBnClickedCheckALL_B()
 {
-	BYTE LightBit = 0b11101111;
+	BYTE LEDBit = 0b11101111;
 	BOOL status = 1;
 	int state = ((CButton*)GetDlgItem(IDC_CHECKALL_B))->GetCheck();
 	if (state != 1)
 	{
-		LightBit = 0b11101111 & (~LightBit); // 非勾选状态
+		LEDBit = 0b11101111 & (~LEDBit); // 非勾选状态
 		status = 0;
 	}
-	UpdateCheckValue(LightBit, status, 1);
+	UpdateCheckValue(LEDBit, status, 1);
 }
 
 void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
@@ -1588,6 +1706,7 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 				m_tempVoltA = vec_VoltA[VoltID]; // 界面当前电压值更新
 				m_tempVoltB = vec_VoltB[VoltID]; // 界面当前电压值更新
 				m_tempLEDWidth = vec_TimeWidth[VoltID]; //界面当前时间宽度更新
+				sendLEDwidth(); 
 				sendLEDVolt();
 				BackSend(Order::WriteData_DAC, 5);
 				BackSend(Order::CommonVolt_On, 5, config_PowerStableTime); // 这里需要消耗一定时长，不能在定时器内。
@@ -1640,13 +1759,13 @@ void CLEDControlDlg::OnClose()
 	Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
 	if (!jsonSetting.isNull())
 	{
-		jsonSetting["LightSwitchA"] = m_LightSwitchA;
-		jsonSetting["LightSwitchB"] = m_LightSwitchB;
+		jsonSetting["LEDSwitchA"] = m_LEDSwitchA;
+		jsonSetting["LEDSwitchB"] = m_LEDSwitchB;
 		jsonSetting["tempVoltA"] = m_tempVoltA;
 		jsonSetting["tempVoltB"] = m_tempVoltB;
 		jsonSetting["CalibrationTime"] = m_CalibrationTime;
-		jsonSetting["LightDelay"] = m_LightDelay;
-		jsonSetting["LEDWidth"] = m_tempLEDWidth;
+		jsonSetting["LEDDelay"] = m_LEDDelay;
+		jsonSetting["tempLEDWidth"] = m_tempLEDWidth;
 		WriteSetting(_T("Setting.json"), jsonSetting);
 	}
 
@@ -1719,7 +1838,7 @@ void CLEDControlDlg::OnEnKillfocusVoltB()
 	}
 }
 
-void CLEDControlDlg::OnEnKillfocusLightWidth()
+void CLEDControlDlg::OnEnKillfocusLEDWidth()
 {
 	UpdateData(TRUE);
 	int minValue = 1;
@@ -1743,26 +1862,26 @@ void CLEDControlDlg::OnEnKillfocusLightWidth()
 	}
 }
 
-void CLEDControlDlg::OnEnKillfocusLightDelay()
+void CLEDControlDlg::OnEnKillfocusLEDDelay()
 {
 	UpdateData(TRUE);
 	int minValue = 1;
 	int maxValue = 65535;
-	if ((m_LightDelay < minValue) || (m_LightDelay > maxValue))
+	if ((m_LEDDelay < minValue) || (m_LEDDelay > maxValue))
 	{
 		// 注意这里要先刷新值，再弹出框提醒用户，因为编辑框响应“光标移除”与“enter"键两种信号，后刷新值会导致重复触发本函数
-		if (m_LightDelay > maxValue)
+		if (m_LEDDelay > maxValue)
 		{
-			m_LightDelay = maxValue;
+			m_LEDDelay = maxValue;
 		}
 		else
 		{
-			m_LightDelay = minValue;
+			m_LEDDelay = minValue;
 		}
 		UpdateData(FALSE);
 
 		CString message;
-		message.Format(_T("The range of LightDelay is %d~%dμs\n"), minValue, maxValue);
+		message.Format(_T("The range of LEDDelay is %d~%dμs\n"), minValue, maxValue);
 		MessageBox(message);
 	}
 }
