@@ -1723,6 +1723,7 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 
 				// （4）-②刷新界面控件的内容
 				UpdateData(FALSE);
+        m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); // 每次刷新后都显示最底部
 
 				// （5）更新json中的"tempVoltA"，"tempVoltB"
 				Json::Value jsonSetting = ReadSetting(_T("Setting.json"));

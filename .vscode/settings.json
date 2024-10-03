@@ -5,6 +5,7 @@
         "xlocale": "cpp",
         "xutility": "cpp",
         "cmath": "cpp",
-        "memory": "cpp"
+        "memory": "cpp",
+        "vector": "cpp"
     }
 }
