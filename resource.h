@@ -44,6 +44,10 @@
 #define IDC_VOLTA_NOTICE                1035
 #define IDC_IDC_VOLTB_NOTICE            1036
 #define IDC_VOLTB_NOTICE                1036
+#define IDC_SEND_NUM                    1038
+#define IDC_CACHE_NUM                   1039
+#define IDC_RECV_NUM2                   1040
+#define IDC_RECV_NUM                    1040
 
 // Next default values for new objects
 // 
@@ -51,7 +55,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        131
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1038
+#define _APS_NEXT_CONTROL_VALUE         1039
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

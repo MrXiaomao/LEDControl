@@ -171,4 +171,7 @@ public:
 	//结束测量状态并重置FPGA
 	afx_msg void ResetSystem();
 	afx_msg void OnBnClickedClearLog();
+	int send_num; //发送字节数目
+	int cache_num; //线程查询到的串口缓存字节数目
+	int recv_num; //接收的字节数目
 };

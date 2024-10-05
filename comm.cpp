@@ -3,6 +3,8 @@
 #include "LEDControl.h" 
 #include "LEDControlDlg.h"
 #include "comm.h"
+#include "Log.h"
+
 char ConvertHexChar(char ch); 
 HANDLE hCom; //串口句柄 
 CString strcomname; //串口名,如"COM1" 
@@ -79,7 +81,8 @@ void OpenComm(int nBaud, int nData, int nStop, int nCal) {
 		0, //独占方式 
 		NULL,
 		OPEN_EXISTING, //打开而不是创建 
-		FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,//重叠方式,用于异步通信
+		0,//同步通讯方式，也就是阻塞式通信
+		//FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,//重叠方式,用于异步通信
 		NULL );
 		if (hCom == INVALID_HANDLE_VALUE) 
 		{ 
@@ -137,10 +140,13 @@ UINT ThreadFunc(LPVOID pParam)
 		DWORD dwBytesRead = 100; 
 		ClearCommError(hCom,&dwErrorFlags,&ComStat); 
 		dwBytesRead = min(dwBytesRead,(DWORD)ComStat.cbInQue); 
+		pdlg->cache_num += ComStat.cbInQue;
 		if(!dwBytesRead) 
 		{ 
-			Sleep(10);//continue;//使用continue时，打开串口后CPU占用率非常高 
-		} else {
+			Sleep(3);//continue;//使用continue时，打开串口后CPU占用率非常高 
+		} 
+		else 
+		{
 			// ::SendMessage(::AfxGetMainWnd()->m_hWnd,WM_READCOMM,1,0); //发送消息,已读到 ，采用排队消息处理方式
 			pdlg->ReadComm(); //多线程处理，不占用界面线程资源
 		}

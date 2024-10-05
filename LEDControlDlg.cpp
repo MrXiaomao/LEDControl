@@ -77,6 +77,9 @@ CLEDControlDlg::CLEDControlDlg(CWnd* pParent /*=nullptr*/)
 	  m_tempVoltB(2700),
 	  timer(0),
 	  VoltFile(_T(""))
+	, send_num(0)
+	, cache_num(0)
+	, recv_num(0)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDI_ICON1);
 	vec_VoltA.resize(0);
@@ -98,6 +101,9 @@ void CLEDControlDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_VOLTA, m_tempVoltA);
 	DDX_Text(pDX, IDC_VOLTB, m_tempVoltB);
 	DDX_Control(pDX, IDC_EDIT_LOG, m_LogEdit);
+	DDX_Text(pDX, IDC_SEND_NUM, send_num);
+	DDX_Text(pDX, IDC_CACHE_NUM, cache_num);
+	DDX_Text(pDX, IDC_RECV_NUM, recv_num);
 }
 
 BEGIN_MESSAGE_MAP(CLEDControlDlg, CDialogEx)
@@ -757,6 +763,7 @@ BOOL CLEDControlDlg::ReadLoopFile(const CString file)
 
 	// 刷新界面控件的内容
 	UpdateData(FALSE);
+	m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); // 每次刷新后都显示最底部
 	return TRUE;
 }
 
@@ -783,7 +790,6 @@ LRESULT CLEDControlDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 
 DWORD CLEDControlDlg::ReadComm()
 {
-	// CString strTemp;
 	OVERLAPPED m_osRead;
 	memset(&m_osRead, 0, sizeof(OVERLAPPED));
 	m_osRead.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -805,7 +811,7 @@ DWORD CLEDControlDlg::ReadComm()
 	lpInBuffer[dwBytesRead] = NULL;
 	int nLength = static_cast<int>(dwBytesRead); //本次接收数据长度
 	// strTemp = lpInBuffer;
-	
+	recv_num += nLength;
 	int receLen = 0; //当前已经接收的总反馈指令长度
 	receLen = recievedFBLength + nLength;
 	BYTE* tempChar = (BYTE*)malloc(receLen);
@@ -851,6 +857,7 @@ void CLEDControlDlg::ShowStatus()
 	m_strLog = _T("串口: ") + comnum + _T("  ") + _T("状态: ") + _T("波特率: ") + strBaud +
 			   _T(", ") + _T("数据位: ") + strData + _T(", ") + _T("停止位: ") + strStop + _T(", ") + _T("校验位: ") + strCal;
 	UpdateData(FALSE);
+	m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); // 每次刷新后都显示最底部
 }
 
 void CLEDControlDlg::OnComcontrol()
@@ -1128,9 +1135,10 @@ void CLEDControlDlg::FPGAInit()
 
 BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWaitingTime, BOOL isShow)
 {
+	CString info;
 	DWORD dwBytesWritten = 5;
 	dwBytesWritten = (DWORD)msgLength;
-
+	DWORD init =5;
 	BOOL bWriteStat;
 	DWORD dwErrorFlags;
 	COMSTAT ComStat;
@@ -1140,6 +1148,12 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 	m_osWrite.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 	ClearCommError(hCom, &dwErrorFlags, &ComStat);
 
+	// 初始化反馈相关参数
+	TCPfeedback = FALSE;
+	LastSendMsg = NULL;
+	RecvMsg = NULL;
+	recievedFBLength = 0;
+
 	// 若超时未检测到反馈指令，则再次发送指令到FPGA。循环等待三次。
 	for (int i = 0; i < 3; i++)
 	{
@@ -1148,35 +1162,48 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 		tm1 = CTime::GetCurrentTime();
 		BOOL flag = FALSE;
 
-		// 初始化反馈相关参数
-		TCPfeedback = FALSE;
-		LastSendMsg = NULL;
-		RecvMsg = NULL;
-		recievedFBLength = 0;
+		// // 初始化反馈相关参数
+		// TCPfeedback = FALSE;
+		// LastSendMsg = NULL;
+		// RecvMsg = NULL;
+		// recievedFBLength = 0;
 
 		// 发送指令
-		bWriteStat = WriteFile(hCom, msg, dwBytesWritten, &dwBytesWritten, &m_osWrite);
-    if (!bWriteStat)
-	  {
-      if (GetLastError() == ERROR_IO_PENDING)
-      {
-        WaitForSingleObject(m_osWrite.hEvent, maxWaitingTime);
-      }
-    }
-		LastSendMsg = msg;
-		FeedbackLen = msgLength;
-		CString info;
-		info.Format(_T("SEND HEX(%d):"), i+1);
-		info = info + Char2HexCString(LastSendMsg, msgLength);
-		PrintLog(info, isShow); 
+		bWriteStat = WriteFile(hCom, msg, init, &dwBytesWritten, &m_osWrite);
+		send_num += dwBytesWritten;
+		if (!bWriteStat)
+		{
+			if (GetLastError() == ERROR_IO_PENDING)
+			{
+				WaitForSingleObject(m_osWrite.hEvent, maxWaitingTime*1000);
+			}
+			Sleep(sleepTime);
 
+			LastSendMsg = msg;
+			FeedbackLen = msgLength;
+			info.Format(_T("IO_PENDING SEND HEX(%d)(length=%d):"), i+1,dwBytesWritten);
+			info = info + Char2HexCString(LastSendMsg, msgLength);
+			PrintLog(info, isShow); 
+		}
+		else
+		{
+			// 清空缓存区
+			PurgeComm(hCom, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
+			Sleep(sleepTime);
+
+			LastSendMsg = msg;
+			FeedbackLen = msgLength;
+			info.Format(_T("SEND HEX(%d)(length=%d):"), i+1,dwBytesWritten);
+			info = info + Char2HexCString(LastSendMsg, msgLength);
+			PrintLog(info, isShow); 
+		}
 		// 阻塞式判断等待反馈指令，并进行判断是否与发送指令相同
 		do
 		{ 
 			// 判断接收指令与发送指令是否相同
 			if (recievedFBLength == msgLength)
 			{
-				CString info = _T("RECV HEX:");
+				info = _T("RECV HEX:");
 				info += Char2HexCString(RecvMsg, recievedFBLength);
 				PrintLog(info, isShow);
 				if (compareBYTE(RecvMsg, LastSendMsg, msgLength)){
@@ -1190,7 +1217,7 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 
 			if (TCPfeedback)
 			{
-				CString info = _T("指令反馈校验成功:");
+				info = _T("指令反馈校验成功:");
 				info += Char2HexCString(RecvMsg, recievedFBLength);
 				PrintLog(info, isShow);
 
@@ -1216,7 +1243,7 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 		PrintLog(info, isShow);
 	}
 
-	CString info = _T("尝试3次下发指令，均无法接受到反馈指令，SEND HEX: ");
+	info = _T("尝试3次下发指令，均无法接受到反馈指令，SEND HEX: ");
 	info = info + Char2HexCString(LastSendMsg, msgLength);
 	PrintLog(info, TRUE);
 
@@ -1723,7 +1750,7 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 
 				// （4）-②刷新界面控件的内容
 				UpdateData(FALSE);
-        m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); // 每次刷新后都显示最底部
+        		m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); // 每次刷新后都显示最底部
 
 				// （5）更新json中的"tempVoltA"，"tempVoltB"
 				Json::Value jsonSetting = ReadSetting(_T("Setting.json"));
@@ -1809,6 +1836,7 @@ void CLEDControlDlg::OnEnKillfocusVoltA()
 			m_tempVoltA = config_minV;
 		}
 		UpdateData(FALSE);
+		m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); // 每次刷新后都显示最底部
 
 		CString message;
 		message.Format(_T("The range of Volt GroupA is %d~%dmV\n"), config_minV, config_maxV);
@@ -1832,6 +1860,7 @@ void CLEDControlDlg::OnEnKillfocusVoltB()
 			m_tempVoltB = config_minV;
 		}
 		UpdateData(FALSE);
+		m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); // 每次刷新后都显示最底部
 
 		CString message;
 		message.Format(_T("The range of Volt GroupB is %d~%dmV\n"), config_minV, config_maxV);
@@ -1856,6 +1885,7 @@ void CLEDControlDlg::OnEnKillfocusLEDWidth()
 			m_tempLEDWidth = minValue;
 		}
 		UpdateData(FALSE);
+		m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); // 每次刷新后都显示最底部
 
 		CString message;
 		message.Format(_T("The range of LEDWidth is %d~%dns\n"), minValue * 10, maxValue * 10);
@@ -1880,6 +1910,7 @@ void CLEDControlDlg::OnEnKillfocusLEDDelay()
 			m_LEDDelay = minValue;
 		}
 		UpdateData(FALSE);
+		m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); // 每次刷新后都显示最底部
 
 		CString message;
 		message.Format(_T("The range of LEDDelay is %d~%dμs\n"), minValue, maxValue);
@@ -1904,6 +1935,7 @@ void CLEDControlDlg::OnEnKillfocusCalibrationTime()
 			m_CalibrationTime = minValue;
 		}
 		UpdateData(FALSE);
+		m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); // 每次刷新后都显示最底部
 
 		CString message;
 		message.Format(_T("The range of CalibrationTime is %d~%ds\n"), minValue, maxValue);
