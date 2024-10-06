@@ -101,9 +101,9 @@ void CLEDControlDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_VOLTA, m_tempVoltA);
 	DDX_Text(pDX, IDC_VOLTB, m_tempVoltB);
 	DDX_Control(pDX, IDC_EDIT_LOG, m_LogEdit);
-	DDX_Text(pDX, IDC_SEND_NUM, send_num);
-	DDX_Text(pDX, IDC_CACHE_NUM, cache_num);
-	DDX_Text(pDX, IDC_RECV_NUM, recv_num);
+	//DDX_Text(pDX, IDC_SEND_NUM, send_num);
+	//DDX_Text(pDX, IDC_CACHE_NUM, cache_num);
+	//DDX_Text(pDX, IDC_RECV_NUM, recv_num);
 }
 
 BEGIN_MESSAGE_MAP(CLEDControlDlg, CDialogEx)
@@ -1255,34 +1255,6 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 	recievedFBLength = 0;
 
 	return FALSE;
-	/*
-	bWriteStat = WriteFile(hCom, msg, dwBytesWritten, &dwBytesWritten, &m_osWrite);
-	if (!bWriteStat)
-	{
-		if (GetLastError() == ERROR_IO_PENDING)
-		{
-			WaitForSingleObject(m_osWrite.hEvent, maxWaitingTime);
-		}
-		// HandSendNum = 0;//return 0;
-
-		CString info = _T("SEND HEX:");
-		info = info + Char2HexCString(msg, msgLength);
-		PrintLog(info, isShow);
-		Sleep(sleepTime);
-		return 0;
-	}
-
-	CString info = _T("SEND HEX:");
-	info = info + Char2HexCString(msg, msgLength);
-	PrintLog(info, isShow);
-	return 0;
-
-	// 清空缓存区
-	PurgeComm(hCom, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
-	// HandSendNum= dwBytesWritten;//return dwBytesWritten;
-	Sleep(sleepTime);
-	return 1;
-	*/
 }
 
 void CLEDControlDlg::sendLEDwidth()

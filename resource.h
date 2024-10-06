@@ -44,9 +44,6 @@
 #define IDC_VOLTA_NOTICE                1035
 #define IDC_IDC_VOLTB_NOTICE            1036
 #define IDC_VOLTB_NOTICE                1036
-#define IDC_SEND_NUM                    1038
-#define IDC_CACHE_NUM                   1039
-#define IDC_RECV_NUM2                   1040
 #define IDC_RECV_NUM                    1040
 
 // Next default values for new objects

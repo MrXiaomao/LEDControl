@@ -48,7 +48,7 @@ public:
 	* sleepTime 发送指令后程序Sleep时间，单位：ms
 	* maxWaitingTime 最大等待时间，单位：s
 	*/
-	BOOL BackSend(BYTE* msg, int msgLength, int sleepTime = 1, int maxWaitingTime = 1, BOOL isShow=FALSE);
+	BOOL BackSend(BYTE* msg, int msgLength, int sleepTime = 4, int maxWaitingTime = 1, BOOL isShow=FALSE);
 
 	//重置FPGA
 	void ResetFPGA();
