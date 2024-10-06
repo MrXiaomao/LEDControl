@@ -793,7 +793,7 @@ DWORD CLEDControlDlg::ReadComm()
 	OVERLAPPED m_osRead;
 	memset(&m_osRead, 0, sizeof(OVERLAPPED));
 	m_osRead.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-	char lpInBuffer[1024];
+	unsigned char lpInBuffer[1024];
 	DWORD dwBytesRead = 1024;
 	BOOL bReadStatus;
 	bReadStatus = ReadFile(hCom, lpInBuffer, dwBytesRead, &dwBytesRead, &m_osRead);
@@ -874,6 +874,7 @@ void CLEDControlDlg::OnComcontrol()
 		return;
 	}
 	m_comlist.GetLBText(commnum_buf, strcomname);
+	strcomname = _T("\\\\.\\") + strcomname;
 	if (!ComIsOK)
 	{
 		// 注意，这里需要转换停止位
@@ -1170,7 +1171,7 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 
 		// 发送指令
 		bWriteStat = WriteFile(hCom, msg, init, &dwBytesWritten, &m_osWrite);
-		send_num += dwBytesWritten;
+		send_num += init;
 		if (!bWriteStat)
 		{
 			if (GetLastError() == ERROR_IO_PENDING)

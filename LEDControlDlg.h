@@ -6,6 +6,7 @@
 
 #include "MyButton.h"
 #include "LEDButton.h"
+#include "SerialPort.h"
 #include <vector>
 using namespace std;
 
@@ -70,6 +71,7 @@ public:
 	//所有参数设置控件是否可用，在正常工作时都禁用，其他时候恢复。
 	void EnableControl(BOOL flag);
 
+	CSerialPort m_Port;  //CSerialPort类对象
 	CStatusBar m_statusBar; // 状态栏
 	int config_nBaud; //波特率
 	int config_nData; //数据位

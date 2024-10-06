@@ -54,6 +54,9 @@
     <ClInclude Include="StdAfx.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="SerialPort.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LEDControl.cpp">
@@ -93,6 +96,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="StdAfx.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="SerialPort.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
