@@ -981,9 +981,10 @@ void CLEDControlDlg::OnBnClickedOneTrigger()
 			// ④写入DAC数据
 			BackSend(Order::WriteData_DAC, 5);
 			// ⑤开启电源，并延时指定时长
-			BackSend(Order::CommonVolt_On, 5, config_PowerStableTime); // 开启外设电源需要发送指令后延时，电源上升需要一定时间稳定
 			info = _T("The power of LED is turn on!");
 			PrintLog(info);
+			BackSend(Order::CommonVolt_On, 5, config_PowerStableTime); // 开启外设电源需要发送指令后延时，电源上升需要一定时间稳定
+			
 			// ⑥开启A触发，并开始定时
 			BackSend(Order::TriggerOn_A, 5);
 			SetTimer(1, m_CalibrationTime * 1000, NULL); // 设置定时器
@@ -1061,9 +1062,10 @@ void CLEDControlDlg::OnBnClickedLoopTrigger()
 		// ④写入DAC数据
 		BackSend(Order::WriteData_DAC, 5);
 		// ⑤开启电源，并延时指定时长
-		BackSend(Order::CommonVolt_On, 5, config_PowerStableTime); // 开启外设电源需要发送指令后延时，电源上升需要一定时间稳定
 		info = _T("The power of LED is open!");
 		PrintLog(info);
+		BackSend(Order::CommonVolt_On, 5, config_PowerStableTime); // 开启外设电源需要发送指令后延时，电源上升需要一定时间稳定
+		
 		// ⑥开启A触发，并开始定时
 		// 日志打印
 		info = _T("Group A Trigger is open!");
@@ -1192,7 +1194,6 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 			{
 				WaitForSingleObject(m_osWrite.hEvent, maxWaitingTime*1000);
 			}
-			Sleep(sleepTime);
 
 			LastSendMsg = msg;
 			FeedbackLen = msgLength;
@@ -1204,7 +1205,6 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 		{
 			// 清空缓存区
 			PurgeComm(hCom, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
-			Sleep(sleepTime);
 
 			LastSendMsg = msg;
 			FeedbackLen = msgLength;
@@ -1242,6 +1242,9 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 				LastSendMsg = NULL;
 				RecvMsg = NULL;
 				recievedFBLength = 0;
+
+				//检验成功，再延时
+				Sleep(sleepTime);
 
 				return TRUE;
 			}
@@ -1741,9 +1744,9 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 				sendLEDwidth(); 
 				sendLEDVolt();
 				BackSend(Order::WriteData_DAC, 5);
-				BackSend(Order::CommonVolt_On, 5, config_PowerStableTime); // 这里需要消耗一定时长，不能在定时器内。
 				info = _T("The power of LED is turn on!");
 				PrintLog(info);
+				BackSend(Order::CommonVolt_On, 5, config_PowerStableTime); // 这里需要消耗一定时长，不能在定时器内。
 
 				// （3）重新开始定时器
 				// 日志打印
