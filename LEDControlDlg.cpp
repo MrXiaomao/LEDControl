@@ -1600,18 +1600,23 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 		if (timer % 3 == 1)
 		{
 			// 日志打印
-			CString info = _T("Group A Trigger is close.Group B Trigger is open!");
+			CString info = _T("Group A Trigger is close!");
 			PrintLog(info);
 
 			BackSend(Order::TriggerOff, 5);	 // 停止触发
+			info = _T("Group B Trigger is open!");
+			PrintLog(info);
 			BackSend(Order::TriggerOn_B, 5); // B组触发			
 		}
 		if (timer % 3 == 2)
 		{
 			// 日志打印
-			CString info = _T("Group B Trigger is close.Group AB Trigger is open!");
+			CString info = _T("Group B Trigger is close!");
 			PrintLog(info);
 			BackSend(Order::TriggerOff, 5);	  // 停止触发
+
+			info = _T("Group AB Trigger is open!");
+			PrintLog(info);
 			BackSend(Order::TriggerOn_AB, 5); // AB组触发
 		}
 		if (timer % 3 == 0)
@@ -1653,19 +1658,23 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 		if (timer % 3 == 1)
 		{
 			// 日志打印
-			CString info = _T("Group A Trigger is close.Group B Trigger is open!");
+			CString info = _T("Group A Trigger is close!");
 			PrintLog(info);
-
 			BackSend(Order::TriggerOff, 5);	 // 停止触发
+			
+			info = _T("Group B Trigger is open!");
+			PrintLog(info);
 			BackSend(Order::TriggerOn_B, 5); // B组触发
 		}
 		if (timer % 3 == 2)
 		{
 			// 日志打印
-			CString info = _T("Group B Trigger is close.Group AB Trigger is open!");
+			CString info = _T("Group B Trigger is close!");
 			PrintLog(info);
-
 			BackSend(Order::TriggerOff, 5);	  // 停止触发
+
+			info = _T("Group AB Trigger is open!");
+			PrintLog(info);
 			BackSend(Order::TriggerOn_AB, 5); // AB组触发			
 		}
 		if (timer % 3 == 0)
@@ -1740,7 +1749,6 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 				// 日志打印
 				info = _T("Group A Trigger is open!");
 				PrintLog(info);
-
 				SetTimer(2, m_CalibrationTime * 1000, NULL);
 				BackSend(Order::TriggerOn_A, 5);
 
