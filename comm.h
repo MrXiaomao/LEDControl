@@ -9,3 +9,4 @@ extern bool SingleTriggerStatus; // ÊÇ·ñ´¦ÓÚSingleTrigger¹¤×÷×´Ì¬£¬ÉêÃ÷ÎªÍâ²¿±äÁ
 extern bool LoopTriggerStatus;   // ÊÇ·ñ´¦ÓÚLoopTrigger¹¤×÷×´Ì¬£¬ÉêÃ÷ÎªÍâ²¿±äÁ¿
 extern HANDLE hCom; 
 extern CString strcomname;
+extern CRITICAL_SECTION m_csCommunicationSync;

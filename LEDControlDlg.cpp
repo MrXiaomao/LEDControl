@@ -779,7 +779,7 @@ LRESULT CLEDControlDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	case WM_READCOMM:
 	{ // 读串口消息
-		ReadComm();
+		// ReadComm();
 		this->SendDlgItemMessage(IDC_EDIT_LOG, WM_VSCROLL, SB_BOTTOM, 0); // 滚动条始终在底部
 		break;
 	}
@@ -829,6 +829,7 @@ DWORD CLEDControlDlg::ReadComm()
 	RecvMsg = tempChar;
 	recievedFBLength +=nLength;
 
+	//::SendMessage(::AfxGetMainWnd()->m_hWnd,WM_READCOMM,1,0); //发送消息,已读到 ，采用排队消息处理方式
 	return 1;
 }
 
@@ -1064,18 +1065,31 @@ void CLEDControlDlg::OnBnClickedLoopTrigger()
 		info = _T("The power of LED is open!");
 		PrintLog(info);
 		// ⑥开启A触发，并开始定时
-		BackSend(Order::TriggerOn_A, 5);
-		SetTimer(2, m_CalibrationTime * 1000, NULL); // 设置定时器
-
 		// 日志打印
 		info = _T("Group A Trigger is open!");
 		PrintLog(info);
 
+		LoopTimeCount = CTime::GetCurrentTime();
+
+		BackSend(Order::TriggerOn_A, 5);
+		SetTimer(2, m_CalibrationTime * 1000, NULL); // 设置定时器
+
 		LoopTriggerStatus = TRUE;
 	}
 	else
-	{ // 关闭
+	{ 
+		// 关闭
 		KillTimer(2);
+
+		//打印时长
+		CTime tmpTime = CTime::GetCurrentTime();
+		CTimeSpan span;
+		span = tmpTime - LoopTimeCount;
+		long loopTime = span.GetSeconds() + span.GetMinutes()*60 + span.GetHours()*3600 + span.GetDays()*3600*24;
+		CString info;
+		info.Format(_T("\r\nLoop total time:%lds!"),loopTime);
+		PrintLog(info);
+
 		// 先对FPGA进行复位
 		ResetFPGA();
 		GetDlgItem(IDC_LOOP_TRIGGER)->SetWindowText(_T("LoopTrigger Start"));
@@ -1085,7 +1099,7 @@ void CLEDControlDlg::OnBnClickedLoopTrigger()
 		GetDlgItem(IDC_ONE_TRIGGER)->EnableWindow(true);
 
 		// 日志打印
-		CString info = _T("\r\nLoopTrigger was forcibly stopped by the user!");
+		info = _T("\r\nLoopTrigger was forcibly stopped by the user!");
 		PrintLog(info);
 
 		LoopTriggerStatus = FALSE;
@@ -1585,27 +1599,27 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 		timer++;
 		if (timer % 3 == 1)
 		{
-			BackSend(Order::TriggerOff, 5);	 // 停止触发
-			BackSend(Order::TriggerOn_B, 5); // B组触发
-
 			// 日志打印
 			CString info = _T("Group A Trigger is close.Group B Trigger is open!");
 			PrintLog(info);
+
+			BackSend(Order::TriggerOff, 5);	 // 停止触发
+			BackSend(Order::TriggerOn_B, 5); // B组触发			
 		}
 		if (timer % 3 == 2)
 		{
-			BackSend(Order::TriggerOff, 5);	  // 停止触发
-			BackSend(Order::TriggerOn_AB, 5); // AB组触发
-
 			// 日志打印
 			CString info = _T("Group B Trigger is close.Group AB Trigger is open!");
 			PrintLog(info);
+			BackSend(Order::TriggerOff, 5);	  // 停止触发
+			BackSend(Order::TriggerOn_AB, 5); // AB组触发
 		}
 		if (timer % 3 == 0)
 		{
-			BackSend(Order::TriggerOff, 5); // 停止触发
 			CString info = _T("Group AB Trigger is close!");
 			PrintLog(info);
+
+			BackSend(Order::TriggerOff, 5); // 停止触发
 
 			KillTimer(1);
 			BackSend(Order::CommonVolt_Off, 5); // 关闭外设电源
@@ -1638,21 +1652,21 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 		// 判断当前属于内循环哪一个状态
 		if (timer % 3 == 1)
 		{
-			BackSend(Order::TriggerOff, 5);	 // 停止触发
-			BackSend(Order::TriggerOn_B, 5); // B组触发
-
 			// 日志打印
 			CString info = _T("Group A Trigger is close.Group B Trigger is open!");
 			PrintLog(info);
+
+			BackSend(Order::TriggerOff, 5);	 // 停止触发
+			BackSend(Order::TriggerOn_B, 5); // B组触发
 		}
 		if (timer % 3 == 2)
 		{
-			BackSend(Order::TriggerOff, 5);	  // 停止触发
-			BackSend(Order::TriggerOn_AB, 5); // AB组触发
-
 			// 日志打印
 			CString info = _T("Group B Trigger is close.Group AB Trigger is open!");
 			PrintLog(info);
+
+			BackSend(Order::TriggerOff, 5);	  // 停止触发
+			BackSend(Order::TriggerOn_AB, 5); // AB组触发			
 		}
 		if (timer % 3 == 0)
 		{
@@ -1660,10 +1674,19 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 			if (VoltID == vec_VoltA.size())
 			{
 				//-------------------结束最后一次触发------------
-				BackSend(Order::TriggerOff, 5); // 停止触发
-				// 日志打印
-				CString info = _T("Group AB Trigger is close!");
+				//打印时长
+				CTime tmpTime = CTime::GetCurrentTime();
+				CTimeSpan span;
+				span = tmpTime - LoopTimeCount;
+				long loopTime = span.GetSeconds() + span.GetMinutes()*60 + span.GetHours()*3600 + span.GetDays()*3600*24;
+				CString info;
+				info.Format(_T("\r\nLoop total time:%lds!"),loopTime);
 				PrintLog(info);
+
+				// 日志打印
+				info = _T("Group AB Trigger is close!");
+				PrintLog(info);
+				BackSend(Order::TriggerOff, 5); // 停止触发
 
 				KillTimer(2);
 
@@ -1691,10 +1714,10 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 				KillTimer(2);
 
 				// （1）结束上一次的内循环
-				BackSend(Order::TriggerOff, 5); // 停止触发
 				// 日志打印
 				CString info = _T("Group AB Trigger is close!");
 				PrintLog(info);
+				BackSend(Order::TriggerOff, 5); // 停止触发
 
 				BackSend(Order::CommonVolt_Off, 5); // 关闭外设电源
 				info = _T("The power of LED is turn off!");
@@ -1714,12 +1737,12 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 				PrintLog(info);
 
 				// （3）重新开始定时器
-				SetTimer(2, m_CalibrationTime * 1000, NULL);
-				BackSend(Order::TriggerOn_A, 5);
-
 				// 日志打印
 				info = _T("Group A Trigger is open!");
 				PrintLog(info);
+
+				SetTimer(2, m_CalibrationTime * 1000, NULL);
+				BackSend(Order::TriggerOn_A, 5);
 
 				// （4）-②刷新界面控件的内容
 				UpdateData(FALSE);

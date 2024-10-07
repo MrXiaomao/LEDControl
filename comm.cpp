@@ -11,6 +11,7 @@ CString strcomname; //串口名,如"COM1"
 bool ComIsOK; //串口打开状态标识,为真表示已打开,否则未打开 
 bool SingleTriggerStatus; // 是否处于SingleTrigger工作状态，为真表示工作中，
 bool LoopTriggerStatus;   // 是否处于LoopTrigger工作状态，为真表示工作中，
+CRITICAL_SECTION m_csCommunicationSync;
 
 //============自动寻找串口函数================================= //
 //函数功能:通过扫描注册表来找出当前所有物理串口

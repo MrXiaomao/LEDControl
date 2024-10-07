@@ -100,6 +100,8 @@ public:
 	BYTE m_LEDSwitchB; //灯光开关控制B，1个字节，八个bit，00000000。从右往左数第五位是无效位。
 	int timer; // 计时器，满测量时长后则发送停止测量
 	CString VoltFile; //存放预设电压的json文件名及其路径
+	
+	CTime LoopTimeCount; // 秒表，计算循环的时长
 	vector<int> vec_VoltA; //A组预设电压值，单位mV
 	vector<int> vec_VoltB; //B组预设电压值，单位mV
 	vector<int> vec_TimeWidth; //时间宽度,单位为x10ns
