@@ -976,6 +976,8 @@ void CLEDControlDlg::OnBnClickedOneTrigger()
 			ResetFPGA();
 			// ②FPGA初始化
 			FPGAInit();
+			// ③配置LED发光宽度
+			sendLEDwidth();
 			// ③配置DAV数据，也就是设置电压
 			sendLEDVolt();
 			// ④写入DAC数据
@@ -985,13 +987,12 @@ void CLEDControlDlg::OnBnClickedOneTrigger()
 			PrintLog(info);
 			BackSend(Order::CommonVolt_On, 5, config_PowerStableTime); // 开启外设电源需要发送指令后延时，电源上升需要一定时间稳定
 			
-			// ⑥开启A触发，并开始定时
+			// ⑥开启A触发，并开始定时// 日志打印
+			info = _T("Group A Trigger is open!");
+			PrintLog(info);
 			BackSend(Order::TriggerOn_A, 5);
 			SetTimer(1, m_CalibrationTime * 1000, NULL); // 设置定时器
 
-			// 日志打印
-			info = _T("Group A Trigger is open!");
-			PrintLog(info);
 			SingleTriggerStatus = TRUE;
 		}
 	}
@@ -1057,6 +1058,8 @@ void CLEDControlDlg::OnBnClickedLoopTrigger()
 		ResetFPGA();
 		// ②FPGA初始化
 		FPGAInit();
+		// ③配置LED发光宽度
+		sendLEDwidth();
 		// ③配置DAV数据，也就是设置第一组电压
 		sendLEDVolt();
 		// ④写入DAC数据
@@ -1141,7 +1144,6 @@ void CLEDControlDlg::EnableControl(BOOL flag)
 
 void CLEDControlDlg::FPGAInit()
 {
-	sendLEDwidth();
 	sendLEDDelay();
 	BackSend(Order::RegisterClockRate, 5);
 	BackSend(Order::TriggerHLPointsSet, 5);
@@ -1152,6 +1154,7 @@ void CLEDControlDlg::FPGAInit()
 
 BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWaitingTime, BOOL isShow)
 {
+	m_statusBar.SetPaneText(0, _T("sending message"));
 	CString info;
 	DWORD dwBytesWritten = 5;
 	dwBytesWritten = (DWORD)msgLength;
@@ -1245,7 +1248,7 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 
 				//检验成功，再延时
 				Sleep(sleepTime);
-
+				m_statusBar.SetPaneText(0, _T("ready"));
 				return TRUE;
 			}
 
@@ -1272,6 +1275,7 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 	recievedFBLength = 0;
 
 	Sleep(sleepTime);
+	m_statusBar.SetPaneText(0, _T("ready"));
 	return FALSE;
 }
 
@@ -1913,7 +1917,7 @@ void CLEDControlDlg::OnEnKillfocusLEDDelay()
 {
 	UpdateData(TRUE);
 	int minValue = 1;
-	int maxValue = 1000;
+	int maxValue = 1000000;
 	if ((m_LEDDelay < minValue) || (m_LEDDelay > maxValue))
 	{
 		// 注意这里要先刷新值，再弹出框提醒用户，因为编辑框响应“光标移除”与“enter"键两种信号，后刷新值会导致重复触发本函数
