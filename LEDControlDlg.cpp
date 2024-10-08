@@ -522,7 +522,7 @@ void CLEDControlDlg::InitBarSettings()
 	m_statusBar.SetPaneText(1, _T("日期"));
 	RepositionBars(AFX_IDW_CONTROLBAR_FIRST, AFX_IDW_CONTROLBAR_LAST, 0);
 	// 开启定时器，刷新状态栏参数
-	SetTimer(3, 200, NULL);
+	SetTimer(3, 1000, NULL);
 }
 
 void CLEDControlDlg::InitSettingByHistoryInput()
@@ -1062,7 +1062,7 @@ void CLEDControlDlg::OnBnClickedLoopTrigger()
 		// ④写入DAC数据
 		BackSend(Order::WriteData_DAC, 5);
 		// ⑤开启电源，并延时指定时长
-		info = _T("The power of LED is open!");
+		info = _T("The power of LED is turn on!");
 		PrintLog(info);
 		BackSend(Order::CommonVolt_On, 5, config_PowerStableTime); // 开启外设电源需要发送指令后延时，电源上升需要一定时间稳定
 		
@@ -1258,12 +1258,12 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 		} while (times < maxWaitingTime); 
 
 		info.Format(_T("等待指令反馈时间%ds,超出最大设置时长%ds,"), times, maxWaitingTime);
-		PrintLog(info, isShow);
+		PrintLog(info, FALSE);
 	}
 
 	info = _T("尝试3次下发指令，均无法接受到反馈指令，SEND HEX: ");
 	info = info + Char2HexCString(LastSendMsg, msgLength);
-	PrintLog(info, TRUE);
+	PrintLog(info, FALSE);
 
 	// 恢复指令反馈相关参数
 	TCPfeedback = FALSE;
@@ -1271,6 +1271,7 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 	RecvMsg = NULL;
 	recievedFBLength = 0;
 
+	Sleep(sleepTime);
 	return FALSE;
 }
 
@@ -1286,9 +1287,12 @@ void CLEDControlDlg::sendLEDwidth()
 
 void CLEDControlDlg::sendLEDDelay()
 {
-	Order::LEDDelay[2] = m_LEDDelay / (16 * 16);
-	Order::LEDDelay[3] = m_LEDDelay % (16 * 16);
-	BackSend(Order::LEDDelay, 5);
+	Order::LEDDelay1[2] = (m_LEDDelay >> 24) & 0xFF;
+	Order::LEDDelay1[3] = (m_LEDDelay >> 16) & 0xFF;
+	Order::LEDDelay2[2] = (m_LEDDelay >> 8)  & 0xFF;
+	Order::LEDDelay2[3] = m_LEDDelay & 0xFF;
+	BackSend(Order::LEDDelay1, 5);
+	BackSend(Order::LEDDelay2, 5);
 }
 
 void CLEDControlDlg::sendShiftRegisterData()
@@ -1305,12 +1309,12 @@ void CLEDControlDlg::sendLEDVolt()
 	int DAC_A = (int)(m_tempVoltA * config_p1_A + config_p2_A);
 	int DAC_B = (int)(m_tempVoltB * config_p1_B + config_p2_B);
 
-	Order::VoltA_LED[2] = DAC_A / (16 * 16);
-	Order::VoltA_LED[3] = DAC_A % (16 * 16);
+	Order::VoltA_LED[2] = (DAC_A >> 8)  & 0xFF;
+	Order::VoltA_LED[3] = DAC_A & 0xFF;
 	BackSend(Order::VoltA_LED, 5);
 
-	Order::VoltB_LED[2] = DAC_B / (16 * 16);
-	Order::VoltB_LED[3] = DAC_B % (16 * 16);
+	Order::VoltB_LED[2] = (DAC_B >> 8)  & 0xFF;
+	Order::VoltB_LED[3] = DAC_B & 0xFF;
 	BackSend(Order::VoltB_LED, 5);
 
 	// 日志打印
@@ -1605,31 +1609,34 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 			// 日志打印
 			CString info = _T("Group A Trigger is close!");
 			PrintLog(info);
-
+			KillTimer(1);
 			BackSend(Order::TriggerOff, 5);	 // 停止触发
+			
 			info = _T("Group B Trigger is open!");
 			PrintLog(info);
-			BackSend(Order::TriggerOn_B, 5); // B组触发			
+			BackSend(Order::TriggerOn_B, 5); // B组触发
+			SetTimer(1, m_CalibrationTime * 1000, NULL); // 设置定时器			
 		}
 		if (timer % 3 == 2)
 		{
 			// 日志打印
 			CString info = _T("Group B Trigger is close!");
 			PrintLog(info);
+			KillTimer(1);
 			BackSend(Order::TriggerOff, 5);	  // 停止触发
 
 			info = _T("Group AB Trigger is open!");
 			PrintLog(info);
 			BackSend(Order::TriggerOn_AB, 5); // AB组触发
+			SetTimer(1, m_CalibrationTime * 1000, NULL); // 设置定时器
 		}
 		if (timer % 3 == 0)
 		{
 			CString info = _T("Group AB Trigger is close!");
 			PrintLog(info);
-
+			KillTimer(1);
 			BackSend(Order::TriggerOff, 5); // 停止触发
 
-			KillTimer(1);
 			BackSend(Order::CommonVolt_Off, 5); // 关闭外设电源
 			info = _T("The power of LED is turn off!");
 			PrintLog(info);
@@ -1663,22 +1670,26 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 			// 日志打印
 			CString info = _T("Group A Trigger is close!");
 			PrintLog(info);
+			KillTimer(2);
 			BackSend(Order::TriggerOff, 5);	 // 停止触发
 			
 			info = _T("Group B Trigger is open!");
 			PrintLog(info);
 			BackSend(Order::TriggerOn_B, 5); // B组触发
+			SetTimer(2, m_CalibrationTime * 1000, NULL); // 设置定时器
 		}
 		if (timer % 3 == 2)
 		{
 			// 日志打印
 			CString info = _T("Group B Trigger is close!");
 			PrintLog(info);
+			KillTimer(2);
 			BackSend(Order::TriggerOff, 5);	  // 停止触发
 
 			info = _T("Group AB Trigger is open!");
 			PrintLog(info);
-			BackSend(Order::TriggerOn_AB, 5); // AB组触发			
+			BackSend(Order::TriggerOn_AB, 5); // AB组触发	
+			SetTimer(2, m_CalibrationTime * 1000, NULL); // 设置定时器		
 		}
 		if (timer % 3 == 0)
 		{
@@ -1686,21 +1697,21 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 			if (VoltID == vec_VoltA.size())
 			{
 				//-------------------结束最后一次触发------------
-				//打印时长
+				//计算运行时长
 				CTime tmpTime = CTime::GetCurrentTime();
 				CTimeSpan span;
 				span = tmpTime - LoopTimeCount;
 				long loopTime = span.GetSeconds() + span.GetMinutes()*60 + span.GetHours()*3600 + span.GetDays()*3600*24;
-				CString info;
-				info.Format(_T("\r\nLoop total time:%lds!"),loopTime);
-				PrintLog(info);
 
 				// 日志打印
-				info = _T("Group AB Trigger is close!");
+				CString info = _T("Group AB Trigger is close!");
+				PrintLog(info);
+				KillTimer(2);
+				
+				//打印时长
+				info.Format(_T("\r\nLoop total time:%lds!"),loopTime);
 				PrintLog(info);
 				BackSend(Order::TriggerOff, 5); // 停止触发
-
-				KillTimer(2);
 
 				BackSend(Order::CommonVolt_Off, 5); // 关闭外设电源
 				info = _T("The power of LED is turn off!");
@@ -1722,13 +1733,11 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 			}
 			else
 			{
-				// 关闭当前定时器
-				KillTimer(2);
-
 				// （1）结束上一次的内循环
 				// 日志打印
 				CString info = _T("Group AB Trigger is close!");
 				PrintLog(info);
+				KillTimer(2);
 				BackSend(Order::TriggerOff, 5); // 停止触发
 
 				BackSend(Order::CommonVolt_Off, 5); // 关闭外设电源
@@ -1752,8 +1761,8 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 				// 日志打印
 				info = _T("Group A Trigger is open!");
 				PrintLog(info);
-				SetTimer(2, m_CalibrationTime * 1000, NULL);
 				BackSend(Order::TriggerOn_A, 5);
+				SetTimer(2, m_CalibrationTime * 1000, NULL);
 
 				// （4）-②刷新界面控件的内容
 				UpdateData(FALSE);
@@ -1904,7 +1913,7 @@ void CLEDControlDlg::OnEnKillfocusLEDDelay()
 {
 	UpdateData(TRUE);
 	int minValue = 1;
-	int maxValue = 65535;
+	int maxValue = 1000;
 	if ((m_LEDDelay < minValue) || (m_LEDDelay > maxValue))
 	{
 		// 注意这里要先刷新值，再弹出框提醒用户，因为编辑框响应“光标移除”与“enter"键两种信号，后刷新值会导致重复触发本函数
@@ -1920,7 +1929,7 @@ void CLEDControlDlg::OnEnKillfocusLEDDelay()
 		m_LogEdit.LineScroll(m_LogEdit.GetLineCount()); // 每次刷新后都显示最底部
 
 		CString message;
-		message.Format(_T("The range of LEDDelay is %d~%dμs\n"), minValue, maxValue);
+		message.Format(_T("The range of LEDDelay is %d~%dns\n"), minValue*10, maxValue*10);
 		MessageBox(message);
 	}
 }

@@ -14,8 +14,9 @@ public:
 	//LED发光宽度，单位为×10ns，例如300ns对应的指令为：12 02 00 1E DD
 	static BYTE LEDWidth[]; 
 
-	//LED发光延迟时间，单位us，默认值9999us
-	static BYTE LEDDelay[];
+	//LED发光延迟时间，单位x10ns，默认值1us
+	static BYTE LEDDelay1[];
+	static BYTE LEDDelay2[];
 
 	//配置移位寄存器时钟频率， 不可更改
 	static BYTE RegisterClockRate[];
