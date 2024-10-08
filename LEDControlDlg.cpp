@@ -1916,7 +1916,7 @@ void CLEDControlDlg::OnEnKillfocusLEDWidth()
 void CLEDControlDlg::OnEnKillfocusLEDDelay()
 {
 	UpdateData(TRUE);
-	int minValue = 1;
+	int minValue = 10;
 	int maxValue = 1000000;
 	if ((m_LEDDelay < minValue) || (m_LEDDelay > maxValue))
 	{
