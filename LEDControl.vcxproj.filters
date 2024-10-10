@@ -57,6 +57,9 @@
     <ClInclude Include="SerialPort.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="GitVersion.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LEDControl.cpp">

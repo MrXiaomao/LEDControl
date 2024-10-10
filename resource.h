@@ -44,15 +44,18 @@
 #define IDC_VOLTA_NOTICE                1035
 #define IDC_IDC_VOLTB_NOTICE            1036
 #define IDC_VOLTB_NOTICE                1036
+#define IDC_GIT_INFO                    1039
 #define IDC_RECV_NUM                    1040
+#define IDC_DEVELOP                     1040
+#define IDC_DEVELOPER                   1040
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        131
+#define _APS_NEXT_RESOURCE_VALUE        133
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1039
+#define _APS_NEXT_CONTROL_VALUE         1040
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

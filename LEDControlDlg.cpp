@@ -8,6 +8,8 @@
 #include "LEDControlDlg.h"
 #include "afxdialogex.h"
 
+#include "GitVersion.h"
+
 #include "MyConst.h"
 #include "comm.h"
 #include "Order.h"
@@ -37,6 +39,8 @@ protected:
 	// 实现
 protected:
 	DECLARE_MESSAGE_MAP()
+public:
+	virtual BOOL OnInitDialog();
 };
 
 CAboutDlg::CAboutDlg() : CDialogEx(IDD_ABOUTBOX)
@@ -50,6 +54,19 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
+
+BOOL CAboutDlg::OnInitDialog()
+{
+	CDialogEx::OnInitDialog();
+
+	// TODO:  在此添加额外的初始化
+	CString commitHash;
+	string commitVer = GIT_VER;
+	commitHash = commitVer.c_str();
+	GetDlgItem(IDC_GIT_INFO)->SetWindowText(commitHash);
+	return TRUE;  // return TRUE unless you set the focus to a control
+				  // 异常: OCX 属性页应返回 FALSE
+}
 
 // CLEDControlDlg 对话框
 
@@ -1077,7 +1094,7 @@ void CLEDControlDlg::OnBnClickedLoopTrigger()
 		LoopTimeCount = CTime::GetCurrentTime();
 
 		BackSend(Order::TriggerOn_A, 5);
-		SetTimer(2, m_CalibrationTime * 1000, NULL); // 设置定时器
+		SetTimer(2, m_CalibrationTime * 10, NULL); // 设置定时器
 
 		LoopTriggerStatus = TRUE;
 	}
@@ -1209,6 +1226,7 @@ BOOL CLEDControlDlg::BackSend(BYTE* msg, int msgLength, int sleepTime, int maxWa
 			// 清空缓存区
 			PurgeComm(hCom, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
 
+			Sleep(4);
 			LastSendMsg = msg;
 			FeedbackLen = msgLength;
 			info.Format(_T("SEND HEX(%d)(length=%d):"), i+1,dwBytesWritten);
@@ -1680,7 +1698,7 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 			info = _T("Group B Trigger is open!");
 			PrintLog(info);
 			BackSend(Order::TriggerOn_B, 5); // B组触发
-			SetTimer(2, m_CalibrationTime * 1000, NULL); // 设置定时器
+			SetTimer(2, m_CalibrationTime * 10, NULL); // 设置定时器
 		}
 		if (timer % 3 == 2)
 		{
@@ -1693,7 +1711,7 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 			info = _T("Group AB Trigger is open!");
 			PrintLog(info);
 			BackSend(Order::TriggerOn_AB, 5); // AB组触发	
-			SetTimer(2, m_CalibrationTime * 1000, NULL); // 设置定时器		
+			SetTimer(2, m_CalibrationTime * 10, NULL); // 设置定时器		
 		}
 		if (timer % 3 == 0)
 		{
@@ -1766,7 +1784,7 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 				info = _T("Group A Trigger is open!");
 				PrintLog(info);
 				BackSend(Order::TriggerOn_A, 5);
-				SetTimer(2, m_CalibrationTime * 1000, NULL);
+				SetTimer(2, m_CalibrationTime * 10, NULL);
 
 				// （4）-②刷新界面控件的内容
 				UpdateData(FALSE);
