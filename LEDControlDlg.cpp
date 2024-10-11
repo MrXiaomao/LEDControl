@@ -1094,7 +1094,7 @@ void CLEDControlDlg::OnBnClickedLoopTrigger()
 		LoopTimeCount = CTime::GetCurrentTime();
 
 		BackSend(Order::TriggerOn_A, 5);
-		SetTimer(2, m_CalibrationTime * 10, NULL); // 设置定时器
+		SetTimer(2, m_CalibrationTime * 1000, NULL); // 设置定时器
 
 		LoopTriggerStatus = TRUE;
 	}
@@ -1698,7 +1698,7 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 			info = _T("Group B Trigger is open!");
 			PrintLog(info);
 			BackSend(Order::TriggerOn_B, 5); // B组触发
-			SetTimer(2, m_CalibrationTime * 10, NULL); // 设置定时器
+			SetTimer(2, m_CalibrationTime * 1000, NULL); // 设置定时器
 		}
 		if (timer % 3 == 2)
 		{
@@ -1711,7 +1711,7 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 			info = _T("Group AB Trigger is open!");
 			PrintLog(info);
 			BackSend(Order::TriggerOn_AB, 5); // AB组触发	
-			SetTimer(2, m_CalibrationTime * 10, NULL); // 设置定时器		
+			SetTimer(2, m_CalibrationTime * 1000, NULL); // 设置定时器		
 		}
 		if (timer % 3 == 0)
 		{
@@ -1784,7 +1784,7 @@ void CLEDControlDlg::OnTimer(UINT_PTR nIDEvent)
 				info = _T("Group A Trigger is open!");
 				PrintLog(info);
 				BackSend(Order::TriggerOn_A, 5);
-				SetTimer(2, m_CalibrationTime * 10, NULL);
+				SetTimer(2, m_CalibrationTime * 1000, NULL);
 
 				// （4）-②刷新界面控件的内容
 				UpdateData(FALSE);
